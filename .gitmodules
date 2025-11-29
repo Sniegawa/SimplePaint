@@ -1,0 +1,6 @@
+[submodule "libs/glfw"]
+	path = libs/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "libs/Nuklear"]
+	path = libs/Nuklear
+	url = https://github.com/Immediate-Mode-UI/Nuklear.git
