@@ -21,16 +21,23 @@
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
 
+typedef struct Image
+{
+	GLuint GlTextureID;
+	struct nk_image nk_imageHandle;
+	unsigned int Width;		//I think w,h is also stored inside struct nk_image
+	unsigned int Height;
+	unsigned char* Data;
+}Image;
 
 //GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
 
-void foo1(int y, float x);
-void foo2(int y, float x);
+Image* CreateImage(unsigned char* data, int width, int height);
 
-
+void DrawImage(struct nk_context* ctx, const Image* image);
 
 int main(int argc, char** argv)
 {
@@ -44,6 +51,9 @@ int main(int argc, char** argv)
 	nk_glfw3_font_stash_begin(&atlas);
 	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
 	nk_glfw3_font_stash_end();
+
+
+
 
 	unsigned char textureData[4 * 4 * 4] = {
 		// Row 0 (top row)
@@ -65,13 +75,8 @@ int main(int argc, char** argv)
 		0,   0,   0, 255,   // Black
 	};
 
-
-
-	GLuint tex = nk_glfw3_create_texture(&textureData, 4, 4);
-	GLuint64 handle = glGetTextureHandleARB(tex);
-
-	struct nk_image checkerImg = nk_image_id(tex);
-
+	Image* testImg = CreateImage(textureData, 4, 4);
+	
 
 	while(!glfwWindowShouldClose(window))
 	{
@@ -93,9 +98,9 @@ int main(int argc, char** argv)
 		*/
 
 		nk_begin(ctx, "Viewport", nk_rect(230, 0, 500, 500), NK_WINDOW_MOVABLE | NK_WINDOW_BORDER | NK_WINDOW_TITLE);
-			nk_layout_row_static(ctx,4,4,1);
-			
-			nk_image(ctx, checkerImg);
+			//nk_layout_row_static(ctx,8,8,1);
+		DrawImage(ctx, testImg);
+			//nk_image(ctx, checkerImg);
 		nk_end(ctx);
 
 
@@ -149,6 +154,30 @@ GLFWwindow* InitLibraries()
 
 	return window;
 }
+
+Image* CreateImage(unsigned char* data, int width, int height)
+{
+	Image* img = (Image*)malloc(sizeof(Image));
+	img->Width = 4;
+	img->Height = 4;
+	img->Data = (unsigned char*)malloc(sizeof(unsigned char) * 64);
+	memcpy_s(img->Data, sizeof(unsigned char) * 64, data, sizeof(unsigned char) * 64);
+
+	GLuint tex = nk_glfw3_create_texture(img->Data, img->Width, img->Height);
+
+	img->nk_imageHandle = nk_image_id(tex);
+
+	return img;
+}
+
+void DrawImage(struct nk_context* ctx, const Image* image)
+{
+	nk_layout_row_static(ctx, image->Width, image->Height, 1);
+
+	nk_image(ctx, image->nk_imageHandle);
+
+}
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
