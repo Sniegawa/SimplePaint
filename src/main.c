@@ -27,6 +27,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
 
+void foo1(int y, float x);
+void foo2(int y, float x);
+
+
+
 int main(int argc, char** argv)
 {
 	GLFWwindow* window = InitLibraries();
@@ -40,6 +45,33 @@ int main(int argc, char** argv)
 	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
 	nk_glfw3_font_stash_end();
 
+	unsigned char textureData[4 * 4 * 4] = {
+		// Row 0 (top row)
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+				255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+		255,   0,   0, 255,   // Red
+		0,   0,   0, 255,   // Black
+	};
+
+
+
+	GLuint tex = nk_glfw3_create_texture(&textureData, 4, 4);
+	GLuint64 handle = glGetTextureHandleARB(tex);
+
+	struct nk_image checkerImg = nk_image_id(tex);
+
 
 	while(!glfwWindowShouldClose(window))
 	{
@@ -47,17 +79,25 @@ int main(int argc, char** argv)
 
 		nk_glfw3_new_frame();
 
-		if(nk_begin(ctx,"Demo Window",nk_rect(50,50,230,150),
-			NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_CLOSABLE | NK_WINDOW_TITLE))
-		{
+		/*nk_begin(ctx, "Demo Window", nk_rect(0, 0, 230, 150),
+			NK_WINDOW_TITLE);
+		
 
 			nk_layout_row_dynamic(ctx, 30, 1);
 			nk_label(ctx, "Hello from Nuklear!", NK_TEXT_LEFT);
 
 			if (nk_button_label(ctx, "Press me!"))
 				printf("Button pressed!\n");
-		}
+		
 		nk_end(ctx);
+		*/
+
+		nk_begin(ctx, "Viewport", nk_rect(230, 0, 500, 500), NK_WINDOW_MOVABLE | NK_WINDOW_BORDER | NK_WINDOW_TITLE);
+			nk_layout_row_static(ctx,4,4,1);
+			
+			nk_image(ctx, checkerImg);
+		nk_end(ctx);
+
 
 
 		glClearColor(0.2, 0.2, 0.2, 1.0);
