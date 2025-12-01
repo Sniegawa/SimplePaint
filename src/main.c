@@ -2,6 +2,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <string.h>
 
 
 #define NK_INCLUDE_FIXED_TYPES
@@ -124,7 +125,6 @@ GLFWwindow* InitLibraries()
 	if (glfwInit() == GLFW_FALSE)
 	{
 		printf("Failed to initialize GLFW!\n");
-		return -1;
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -138,7 +138,6 @@ GLFWwindow* InitLibraries()
 	{
 		printf("Failed to initialize window!\n");
 		glfwTerminate();
-		return -1;
 	}
 
 	glfwMakeContextCurrent(window);
@@ -147,7 +146,6 @@ GLFWwindow* InitLibraries()
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		printf("Failed to initialize GLAD!\n");
-		return -1;
 	}
 
 	glViewport(0, 0, 800, 600);
@@ -161,8 +159,8 @@ Image* CreateImage(unsigned char* data, int width, int height)
 	img->Width = 4;
 	img->Height = 4;
 	img->Data = (unsigned char*)malloc(sizeof(unsigned char) * 64);
-	memcpy_s(img->Data, sizeof(unsigned char) * 64, data, sizeof(unsigned char) * 64);
-
+	//memcpy_s(img->Data, sizeof(unsigned char) * 64, data, sizeof(unsigned char) * 64);
+  memcpy(img->Data, data, sizeof(unsigned char) * 64);
 	GLuint tex = nk_glfw3_create_texture(img->Data, img->Width, img->Height);
 
 	img->nk_imageHandle = nk_image_id(tex);
