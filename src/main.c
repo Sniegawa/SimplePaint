@@ -18,6 +18,8 @@
 #include <nuklear.h>
 #include <demo/glfw_opengl4/nuklear_glfw_gl4.h>
 
+#define BMP_IMPLEMENTATION
+#include <SimpleBMP.h>
 
 #define MAX_VERTEX_BUFFER 512 * 1024
 #define MAX_ELEMENT_BUFFER 128 * 1024
@@ -36,7 +38,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
 
-Image* CreateImage(unsigned char* data, int width, int height);
+Image* CreateImage(const char* path);
 
 void DrawImage(struct nk_context* ctx, const Image* image);
 
@@ -53,31 +55,8 @@ int main(int argc, char** argv)
 	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
 	nk_glfw3_font_stash_end();
 
-
-
-
-	unsigned char textureData[4 * 4 * 4] = {
-		// Row 0 (top row)
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-				255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-		255,   0,   0, 255,   // Red
-		0,   0,   0, 255,   // Black
-	};
-
-	Image* testImg = CreateImage(textureData, 4, 4);
-	
+	Image* testImg = CreateImage("test.bmp");
+	Image* testImg2 = CreateImage("paint.bmp");
 
 	while(!glfwWindowShouldClose(window))
 	{
@@ -98,12 +77,12 @@ int main(int argc, char** argv)
 		nk_end(ctx);
 		*/
 
-		nk_begin(ctx, "Viewport", nk_rect(230, 0, 500, 500), NK_WINDOW_MOVABLE | NK_WINDOW_BORDER | NK_WINDOW_TITLE);
+		nk_begin(ctx, "Viewport", nk_rect(230, 0, 1200, 1200), NK_WINDOW_MOVABLE | NK_WINDOW_BORDER | NK_WINDOW_TITLE);
 			//nk_layout_row_static(ctx,8,8,1);
-		DrawImage(ctx, testImg);
+			DrawImage(ctx, testImg2);
+			DrawImage(ctx, testImg);
 			//nk_image(ctx, checkerImg);
 		nk_end(ctx);
-
 
 
 		glClearColor(0.2, 0.2, 0.2, 1.0);
@@ -153,24 +132,43 @@ GLFWwindow* InitLibraries()
 	return window;
 }
 
-Image* CreateImage(unsigned char* data, int width, int height)
+Image* CreateImage(const char* path)
 {
+
+	BMP_IMAGE* imageData = BMP_LOAD(path);
+
 	Image* img = (Image*)malloc(sizeof(Image));
-	img->Width = 4;
-	img->Height = 4;
-	img->Data = (unsigned char*)malloc(sizeof(unsigned char) * 64);
-	//memcpy_s(img->Data, sizeof(unsigned char) * 64, data, sizeof(unsigned char) * 64);
-  memcpy(img->Data, data, sizeof(unsigned char) * 64);
-	GLuint tex = nk_glfw3_create_texture(img->Data, img->Width, img->Height);
+	int width =  imageData->width;
+	int height = imageData->height;
+	printf("%d %d\n", width, height);
+	img->Width = width;
+	img->Height = height;
+	img->Data = (unsigned char*)malloc(width * height * 3);
+
+	memcpy(img->Data, imageData->pixels, width * height * 3);
+
+	GLuint tex;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width , height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData->pixels);
 
 	img->nk_imageHandle = nk_image_id(tex);
+
+	BMP_FREE(imageData);
 
 	return img;
 }
 
 void DrawImage(struct nk_context* ctx, const Image* image)
 {
-	nk_layout_row_static(ctx, image->Width, image->Height, 1);
+	nk_layout_row_static(ctx, image->Height, image->Width, 1);
 
 	nk_image(ctx, image->nk_imageHandle);
 

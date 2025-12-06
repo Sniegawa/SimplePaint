@@ -4,3 +4,6 @@
 [submodule "libs/Nuklear"]
 	path = libs/Nuklear
 	url = https://github.com/Immediate-Mode-UI/Nuklear.git
+[submodule "libs/SimplePaint"]
+	path = libs/SimplePaint
+	url = https://github.com/Sniegawa/SimpleBMP.git
