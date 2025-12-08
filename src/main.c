@@ -39,8 +39,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 GLFWwindow* InitLibraries();
 
 Image* CreateImage(const char* path);
-
 void DrawImage(struct nk_context* ctx, const Image* image);
+
+void DrawToolbox(struct nk_Context* ctx);
+void DrawViewport(struct nk_context* ctx, const Image* image);
+void DrawMenu(struct nk_context* ctx);
 
 int main(int argc, char** argv)
 {
@@ -58,35 +61,33 @@ int main(int argc, char** argv)
 	Image* testImg = CreateImage("test.bmp");
 	Image* testImg2 = CreateImage("paint.bmp");
 
+
+
 	while(!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
 
-		nk_glfw3_new_frame();
-
-		/*nk_begin(ctx, "Demo Window", nk_rect(0, 0, 230, 150),
-			NK_WINDOW_TITLE);
-		
-
-			nk_layout_row_dynamic(ctx, 30, 1);
-			nk_label(ctx, "Hello from Nuklear!", NK_TEXT_LEFT);
-
-			if (nk_button_label(ctx, "Press me!"))
-				printf("Button pressed!\n");
-		
-		nk_end(ctx);
-		*/
-
-		nk_begin(ctx, "Viewport", nk_rect(230, 0, 1200, 1200), NK_WINDOW_MOVABLE | NK_WINDOW_BORDER | NK_WINDOW_TITLE);
-			//nk_layout_row_static(ctx,8,8,1);
-			DrawImage(ctx, testImg2);
-			DrawImage(ctx, testImg);
-			//nk_image(ctx, checkerImg);
-		nk_end(ctx);
-
-
 		glClearColor(0.2, 0.2, 0.2, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+
+		nk_glfw3_new_frame();
+
+		if (nk_begin(ctx, "SimplePaint", nk_rect(0, 0, 800, 600), NK_WINDOW_NO_SCROLLBAR))
+		{
+			DrawMenu(ctx);
+
+			nk_layout_row_begin(ctx, NK_STATIC, nk_window_get_height(ctx) - 20, 2);
+
+			nk_layout_row_push(ctx, 150);
+
+			DrawToolbox(ctx);
+
+			nk_layout_row_push(ctx, nk_window_get_width(ctx) - 150 - 10);
+			DrawViewport(ctx, testImg);
+			nk_end(ctx);
+		}
+
 
 
 		nk_glfw3_render(NK_ANTI_ALIASING_ON);
@@ -140,7 +141,6 @@ Image* CreateImage(const char* path)
 	Image* img = (Image*)malloc(sizeof(Image));
 	int width =  imageData->width;
 	int height = imageData->height;
-	printf("%d %d\n", width, height);
 	img->Width = width;
 	img->Height = height;
 	img->Data = (unsigned char*)malloc(width * height * 3);
@@ -171,6 +171,93 @@ void DrawImage(struct nk_context* ctx, const Image* image)
 	nk_layout_row_static(ctx, image->Height, image->Width, 1);
 
 	nk_image(ctx, image->nk_imageHandle);
+
+}
+
+void DrawToolbox(struct nk_Context* ctx)
+{
+	if (nk_group_begin(ctx,"Toolbox",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+	{
+		nk_layout_row_static(ctx, 0, 50, 2);
+		
+		if (nk_button_label(ctx, "Pencil"))
+		{
+			printf("Selected Pencil\n");
+		}
+
+		if (nk_button_label(ctx, "Brush"))
+		{
+			printf("Selected Brush\n");
+		}
+
+		if(nk_button_label(ctx, "Eraser"))
+		{
+			printf("Selected Eraser\n");
+		}
+
+		nk_group_end(ctx);
+	}
+
+}
+
+void DrawViewport(struct nk_context* ctx, const Image* image)
+{
+	if(nk_group_begin(ctx,"Viewport",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+	{
+		nk_layout_row_static(ctx, image->Height, image->Width, 1);
+
+		struct nk_rect bound = nk_widget_bounds(ctx);
+		
+		nk_image(ctx, image->nk_imageHandle);
+		
+		if (nk_input_is_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, bound, nk_true))
+		{
+			struct nk_vec2 mouse = ctx->input.mouse.pos;
+
+			int localX = (int)mouse.x - bound.x;
+			int localY = (int)mouse.y - bound.y;
+
+
+			//This part doesn't work
+			int R = image->Data[localY * image->Width + localX];
+			int G = image->Data[localY * image->Width + localX + 1];
+			int B = image->Data[localY * image->Width + localX + 2];
+
+			printf("Mouse pressed at %d , %d\n color is %d, %d, %d\n", localX, localY, R, G, B);
+
+		}
+
+
+		nk_group_end(ctx);
+	}
+
+}
+
+void DrawMenu(struct nk_context* ctx)
+{
+
+	nk_menubar_begin(ctx);
+
+
+	nk_layout_row_static(ctx, 10, 50, 2);
+
+	if (nk_menu_begin_label(ctx, "File", NK_TEXT_LEFT, nk_vec2(150, 200)))
+	{
+		nk_layout_row_dynamic(ctx, 25, 1);
+		if (nk_menu_item_label(ctx, "New", NK_TEXT_LEFT)) printf("a\n");
+		nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT);
+		nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT);
+		nk_menu_end(ctx);
+	}
+
+	if (nk_menu_begin_label(ctx, "Help", NK_TEXT_LEFT, nk_vec2(150, 200)))
+	{
+		nk_layout_row_dynamic(ctx, 25, 1);
+		nk_menu_item_label(ctx, "About", NK_TEXT_LEFT);
+		nk_menu_end(ctx);
+	}
+
+	nk_menubar_end(ctx);
 
 }
 
