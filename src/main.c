@@ -41,7 +41,7 @@ GLFWwindow* InitLibraries();
 Image* CreateImage(const char* path);
 void DrawImage(struct nk_context* ctx, const Image* image);
 
-void DrawToolbox(struct nk_Context* ctx);
+void DrawToolbox(struct nk_context* ctx);
 void DrawViewport(struct nk_context* ctx, const Image* image);
 void DrawMenu(struct nk_context* ctx);
 
@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 	nk_glfw3_font_stash_end();
 
 	Image* testImg = CreateImage("test.bmp");
-	Image* testImg2 = CreateImage("paint.bmp");
+//	Image* testImg2 = CreateImage("paint.bmp");
 
 
 
@@ -174,7 +174,7 @@ void DrawImage(struct nk_context* ctx, const Image* image)
 
 }
 
-void DrawToolbox(struct nk_Context* ctx)
+void DrawToolbox(struct nk_context* ctx)
 {
 	if (nk_group_begin(ctx,"Toolbox",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 	{
