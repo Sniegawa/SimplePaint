@@ -1,17 +1,10 @@
+#include "structs.h"
+
 #include <stdio.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <string.h>
-
-
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
 
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
@@ -21,19 +14,10 @@
 #define BMP_IMPLEMENTATION
 #include <SimpleBMP.h>
 
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_ELEMENT_BUFFER 128 * 1024
 
-typedef struct Image
-{
-	GLuint GlTextureID;
-	struct nk_image nk_imageHandle;
-	unsigned int Width;		//I think w,h is also stored inside struct nk_image
-	unsigned int Height;
-	unsigned char* Data;
-}Image;
 
-//GLFW callbacks
+
+// GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
@@ -41,26 +25,40 @@ GLFWwindow* InitLibraries();
 Image* CreateImage(const char* path);
 void DrawImage(struct nk_context* ctx, const Image* image);
 
-void DrawToolbox(struct nk_context* ctx);
-void DrawViewport(struct nk_context* ctx, const Image* image);
-void DrawMenu(struct nk_context* ctx);
+// Helper color functions
+struct nk_color ColorToNK(Color c);
+struct nk_colorf ColorToNKf(Color c);
+Color NKftoColor(struct nk_colorf nk_cf);
+
+
+// Menu drawing functions
+void DrawToolbox(APP_STATE* state);
+void DrawViewport(APP_STATE* state);
+void DrawMenu(APP_STATE* state);
+void DrawColorMenu(APP_STATE* state);
 
 int main(int argc, char** argv)
 {
 	GLFWwindow* window = InitLibraries();
 
-	//init nuklear
+	// Init nuklear
 	struct nk_context* ctx = nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 
-	//load fonts
+	// Init App state
+	APP_STATE* state = (APP_STATE*)malloc(sizeof(APP_STATE));
+	state->ctx = ctx;
+	state->SelectedTool = Pencil;
+	state->Palette.foreground = (Color){ 255,255,255 };
+
+	// Load fonts
 	struct nk_font_atlas* atlas;
 	nk_glfw3_font_stash_begin(&atlas);
 	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
 	nk_glfw3_font_stash_end();
 
-	Image* testImg = CreateImage("test.bmp");
-//	Image* testImg2 = CreateImage("paint.bmp");
+	Image* testImg = CreateImage("paint.bmp");
 
+	state->CurrentImage = testImg;
 
 
 	while(!glfwWindowShouldClose(window))
@@ -75,16 +73,16 @@ int main(int argc, char** argv)
 
 		if (nk_begin(ctx, "SimplePaint", nk_rect(0, 0, 800, 600), NK_WINDOW_NO_SCROLLBAR))
 		{
-			DrawMenu(ctx);
+			DrawMenu(state);
 
 			nk_layout_row_begin(ctx, NK_STATIC, nk_window_get_height(ctx) - 20, 2);
 
 			nk_layout_row_push(ctx, 150);
 
-			DrawToolbox(ctx);
+			DrawToolbox(state);
 
 			nk_layout_row_push(ctx, nk_window_get_width(ctx) - 150 - 10);
-			DrawViewport(ctx, testImg);
+			DrawViewport(state);
 			nk_end(ctx);
 		}
 
@@ -143,9 +141,16 @@ Image* CreateImage(const char* path)
 	int height = imageData->height;
 	img->Width = width;
 	img->Height = height;
-	img->Data = (unsigned char*)malloc(width * height * 3);
+	size_t dataSize = (size_t)width * height * 3;
+	img->Data = (unsigned char*)malloc(dataSize);
 
-	memcpy(img->Data, imageData->pixels, width * height * 3);
+	if(!img->Data)
+	{
+		free(img);
+		return NULL;
+	}
+
+	memcpy(img->Data, imageData->pixels, dataSize);
 
 	GLuint tex;
 	glGenTextures(1, &tex);
@@ -159,7 +164,7 @@ Image* CreateImage(const char* path)
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width , height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData->pixels);
 
-	img->nk_imageHandle = nk_image_id(tex);
+	img->handle = nk_image_id(tex);
 
 	BMP_FREE(imageData);
 
@@ -170,46 +175,99 @@ void DrawImage(struct nk_context* ctx, const Image* image)
 {
 	nk_layout_row_static(ctx, image->Height, image->Width, 1);
 
-	nk_image(ctx, image->nk_imageHandle);
+	nk_image(ctx, image->handle);
 
 }
 
-void DrawToolbox(struct nk_context* ctx)
+void DrawToolbox(APP_STATE* state)
 {
+	struct nk_context* ctx = state->ctx;
+
+	float height = nk_window_get_height(ctx) - 40;
+
 	if (nk_group_begin(ctx,"Toolbox",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 	{
-		nk_layout_row_static(ctx, 0, 50, 2);
-		
-		if (nk_button_label(ctx, "Pencil"))
+		// TODO : FIGURE OUT PADDINGS
+		// Tools
+		nk_layout_row_dynamic(ctx, height * 0.5f - 40, 1);
+		if (nk_group_begin(ctx, "Tools",0))
 		{
-			printf("Selected Pencil\n");
+
+			nk_layout_row_static(ctx, 0, 50, 2);
+
+			if (nk_button_label(ctx, "Pencil"))
+			{
+				state->SelectedTool = Pencil;
+			}
+
+			if (nk_button_label(ctx, "Brush"))
+			{
+				state->SelectedTool = Brush;
+			}
+
+			if (nk_button_label(ctx, "Eraser"))
+			{
+				state->SelectedTool = Eraser;
+			}
+
+			if (nk_button_label(ctx, "Color picker"))
+			{
+				state->SelectedTool = ColorPicker;
+			}
+			nk_group_end(ctx);
 		}
 
-		if (nk_button_label(ctx, "Brush"))
+		// Color
+		nk_layout_row_dynamic(ctx, height * 0.5f, 1);
+		if(nk_group_begin(ctx,"Colors",0))
 		{
-			printf("Selected Brush\n");
+			struct nk_rect content = nk_window_get_content_region(ctx);
+
+			nk_layout_row_static(ctx, content.w, content.w, 1);
+			Color fg = state->Palette.foreground;
+			struct nk_colorf color = nk_color_picker(ctx, ColorToNKf(fg), NK_RGB);
+			
+			state->Palette.foreground = NKftoColor(color);
+
+			nk_group_end(ctx);
 		}
 
-		if(nk_button_label(ctx, "Eraser"))
-		{
-			printf("Selected Eraser\n");
-		}
 
 		nk_group_end(ctx);
 	}
 
 }
 
-void DrawViewport(struct nk_context* ctx, const Image* image)
+void DrawViewport(APP_STATE* state)
 {
-	if(nk_group_begin(ctx,"Viewport",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
-	{
-		nk_layout_row_static(ctx, image->Height, image->Width, 1);
+	struct nk_context* ctx = state->ctx;
+	Image* image = state->CurrentImage;
 
+	if (nk_group_begin(ctx, "Viewport", NK_WINDOW_BORDER | NK_WINDOW_TITLE))
+	{
+		struct nk_rect content = nk_window_get_content_region(ctx);
+
+		float pad_x = (content.w - image->Width) * 0.5f;
+		float pad_y = (content.h - image->Height) * 0.5f;
+
+		if (pad_x < 0) pad_x = 0;
+		if (pad_y < 0) pad_y = 0;
+
+		nk_layout_row_dynamic(ctx,0.5 * pad_y, 1);
+		nk_spacing(ctx, 1);
+
+		
+		nk_layout_row_begin(ctx, NK_STATIC, image->Height, 3);
+
+		nk_layout_row_push(ctx, pad_x);
+		nk_spacing(ctx, 1);
+		nk_layout_row_push(ctx, image->Width);
 		struct nk_rect bound = nk_widget_bounds(ctx);
-		
-		nk_image(ctx, image->nk_imageHandle);
-		
+		nk_image(ctx, image->handle);
+		nk_layout_row_push(ctx, pad_x);
+
+		nk_layout_row_end(ctx);
+
 		if (nk_input_is_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, bound, nk_true))
 		{
 			struct nk_vec2 mouse = ctx->input.mouse.pos;
@@ -217,27 +275,30 @@ void DrawViewport(struct nk_context* ctx, const Image* image)
 			int localX = (int)mouse.x - bound.x;
 			int localY = (int)mouse.y - bound.y;
 
+			if (localX >= 0 && localY >= 0 && localX < image->Width && localY < image->Height)
+			{
+				int index = (localY * image->Width + localX) * 3;
+				int R = image->Data[index];
+				int G = image->Data[index + 1];
+				int B = image->Data[index + 2];
 
-			//This part doesn't work
-			int R = image->Data[localY * image->Width + localX];
-			int G = image->Data[localY * image->Width + localX + 1];
-			int B = image->Data[localY * image->Width + localX + 2];
-
-			printf("Mouse pressed at %d , %d\n color is %d, %d, %d\n", localX, localY, R, G, B);
-
+				switch (state->SelectedTool)
+				{
+				case ColorPicker:
+					state->Palette.foreground = (Color){R,G,B};
+					break;
+				}
+			}
 		}
-
-
 		nk_group_end(ctx);
 	}
 
 }
 
-void DrawMenu(struct nk_context* ctx)
+void DrawMenu(APP_STATE* state)
 {
-
+	struct nk_context* ctx = state->ctx;
 	nk_menubar_begin(ctx);
-
 
 	nk_layout_row_static(ctx, 10, 50, 2);
 
@@ -261,8 +322,42 @@ void DrawMenu(struct nk_context* ctx)
 
 }
 
+void DrawColorMenu(APP_STATE* state)
+{
+	struct nk_context* ctx = state->ctx;
+
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
+}
+
+struct nk_color ColorToNK(Color c)
+{
+	struct nk_color nk_c;
+	nk_c.r = c.R;
+	nk_c.g = c.G;
+	nk_c.b = c.B;
+	nk_c.a = 255;
+	return nk_c;
+}
+
+struct nk_colorf ColorToNKf(Color c)
+{
+	struct nk_colorf nk_cf;
+	nk_cf.r = (float)c.R / 255;
+	nk_cf.g = (float)c.G / 255;
+	nk_cf.b = (float)c.B / 255;
+	nk_cf.a = 1.0f;
+	return nk_cf;
+}
+
+Color NKftoColor(struct nk_colorf nk_cf)
+{
+	Color c;
+	c.R = nk_cf.r * 255;
+	c.G = nk_cf.g * 255;
+	c.B = nk_cf.b * 255;
+	return c;
 }

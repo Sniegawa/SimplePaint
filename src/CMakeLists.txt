@@ -4,7 +4,7 @@ project(SimplePaint)
 
 add_executable(SimplePaint
 	"main.c"
-)
+ "structs.h")
 
 target_link_libraries(SimplePaint PUBLIC
 	GLAD
