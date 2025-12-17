@@ -1,6 +1,7 @@
 #include "structs.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -22,8 +23,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
 
-Image* CreateImage(const char* path);
+Image* CreateImagePath(const char* path);
+Image* CreateImage(unsigned int width, unsigned int height, const unsigned char* data);
 void DrawImage(struct nk_context* ctx, const Image* image);
+void FreeImage(Image* img);
 
 // Helper color functions
 struct nk_color ColorToNK(Color c);
@@ -56,7 +59,7 @@ int main(int argc, char** argv)
 	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
 	nk_glfw3_font_stash_end();
 
-	Image* testImg = CreateImage("paint.bmp");
+	Image* testImg = CreateImagePath("paint.bmp");
 
 	state->CurrentImage = testImg;
 
@@ -131,7 +134,7 @@ GLFWwindow* InitLibraries()
 	return window;
 }
 
-Image* CreateImage(const char* path)
+Image* CreateImagePath(const char* path)
 {
 
 	BMP_IMAGE* imageData = BMP_LOAD(path);
@@ -165,10 +168,54 @@ Image* CreateImage(const char* path)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width , height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData->pixels);
 
 	img->handle = nk_image_id(tex);
+	img->GlTextureID = tex;
 
 	BMP_FREE(imageData);
 
 	return img;
+}
+
+Image* CreateImage(unsigned int width, unsigned int height, const unsigned char* data)
+{
+	Image* img = (Image*)malloc(sizeof(Image));
+	img->Width = width;
+	img->Height = height;
+	size_t dataSize = (size_t)width * height * 3;
+	img->Data = (unsigned char*)malloc(dataSize);
+
+	if (!img->Data)
+	{
+		free(img);
+		return NULL;
+	}
+
+	memcpy(img->Data, data, dataSize);
+	GLuint tex;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+	img->handle = nk_image_id(tex);
+	img->GlTextureID = tex;
+	free(data);
+	return img;
+
+}
+
+void FreeImage(Image* img)
+{
+	// Free the opengl texture memory
+	// Note : glDeleteTextures DOES NOT free the memory from the driver, it allows gpu driver to reuse the texture handle, and the memory is still held for reuse
+	glDeleteTextures(1, &img->GlTextureID);
+	free(img->Data); // Free loaded pixel data
+	free(img); // Free the struct
 }
 
 void DrawImage(struct nk_context* ctx, const Image* image)
@@ -298,6 +345,9 @@ void DrawViewport(APP_STATE* state)
 void DrawMenu(APP_STATE* state)
 {
 	struct nk_context* ctx = state->ctx;
+	
+	static bool NewImageFlag = false;
+
 	nk_menubar_begin(ctx);
 
 	nk_layout_row_static(ctx, 10, 50, 2);
@@ -305,7 +355,9 @@ void DrawMenu(APP_STATE* state)
 	if (nk_menu_begin_label(ctx, "File", NK_TEXT_LEFT, nk_vec2(150, 200)))
 	{
 		nk_layout_row_dynamic(ctx, 25, 1);
-		if (nk_menu_item_label(ctx, "New", NK_TEXT_LEFT)) printf("a\n");
+		if (nk_menu_item_label(ctx, "New", NK_TEXT_LEFT))
+			NewImageFlag = true;
+
 		nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT);
 		nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT);
 		nk_menu_end(ctx);
@@ -319,6 +371,39 @@ void DrawMenu(APP_STATE* state)
 	}
 
 	nk_menubar_end(ctx);
+
+	if(NewImageFlag)
+	{
+		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "New image", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE, nk_rect(100, 100, 220, 150)))
+		{
+			nk_layout_row_dynamic(ctx, 30, 1);
+			nk_label(ctx, "Create new image", NK_TEXT_CENTERED);
+
+			static int width = 200, height = 200;
+			nk_property_int(ctx, "Width", 1, &width, 4096, 1, 0.5f);
+			nk_property_int(ctx, "Height", 1, &height, 4096, 1, 0.5f);
+
+
+			if (nk_button_label(ctx, "Create"))
+			{
+				FreeImage(state->CurrentImage);
+				unsigned char* data = (unsigned char*)calloc((size_t)width * height * 3, sizeof(unsigned char));
+
+				memset(data, 255, (size_t)width * height * 3);
+				
+				state->CurrentImage = CreateImage(width, height, data);
+				nk_popup_close(ctx);
+				NewImageFlag = false;
+			}
+			if (nk_button_label(ctx, "Close"))
+			{
+				nk_popup_close(ctx);
+				NewImageFlag = false;
+			}
+			nk_popup_end(ctx);
+		}
+
+	}
 
 }
 
