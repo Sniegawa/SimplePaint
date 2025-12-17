@@ -213,27 +213,31 @@ void DrawViewport(APP_STATE* state)
 
 		nk_layout_row_end(ctx);
 
-		if (nk_input_is_mouse_click_down_in_rect(&ctx->input, NK_BUTTON_LEFT, bound, nk_true))
+		if (nk_input_is_mouse_down(&ctx->input, NK_BUTTON_LEFT))
 		{
+			
 			struct nk_vec2 mouse = ctx->input.mouse.pos;
 
-			int localX = (int)mouse.x - bound.x;
-			int localY = (int)mouse.y - bound.y;
-
-			if (localX >= 0 && localY >= 0 && localX < image->Width && localY < image->Height)
+			if (mouse.x >= bound.x && mouse.x < bound.x + bound.w && mouse.y >= bound.y && mouse.y < bound.y + bound.h)
 			{
-				int index = (localY * image->Width + localX) * 3;
-				int R = image->Data[index];
-				int G = image->Data[index + 1];
-				int B = image->Data[index + 2];
+				int localX = (int)mouse.x - bound.x;
+				int localY = (int)mouse.y - bound.y;
 
-				switch (state->SelectedTool)
+				if (localX >= 0 && localY >= 0 && localX < image->Width && localY < image->Height)
 				{
-				case ColorPicker:
-					state->Palette.foreground = (Color){R,G,B};
-					break;
-				case Pencil:
-					DrawPencil(state, localX, localY);
+					int index = (localY * image->Width + localX) * 3;
+					int R = image->Data[index];
+					int G = image->Data[index + 1];
+					int B = image->Data[index + 2];
+
+					switch (state->SelectedTool)
+					{
+					case ColorPicker:
+						state->Palette.foreground = (Color){ R,G,B };
+						break;
+					case Pencil:
+						DrawPencil(state, localX, localY);
+					}
 				}
 			}
 		}
