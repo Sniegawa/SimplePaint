@@ -10,3 +10,4 @@ Image* CreateImage(unsigned int width, unsigned int height, const unsigned char*
 void DrawImage(struct nk_context* ctx, const Image* image);
 void FreeImage(Image* img);
 void SaveImage(Image* img, const char* path);
+void UpdateImage(Image* img);

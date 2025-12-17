@@ -25,7 +25,8 @@ GLFWwindow* InitLibraries();
 void DrawToolbox(APP_STATE* state);
 void DrawViewport(APP_STATE* state);
 void DrawMenu(APP_STATE* state);
-void DrawColorMenu(APP_STATE* state);
+
+void DrawPencil(APP_STATE* state,unsigned int x,unsigned int y);
 
 int main(int argc, char** argv)
 {
@@ -231,6 +232,8 @@ void DrawViewport(APP_STATE* state)
 				case ColorPicker:
 					state->Palette.foreground = (Color){R,G,B};
 					break;
+				case Pencil:
+					DrawPencil(state, localX, localY);
 				}
 			}
 		}
@@ -330,11 +333,18 @@ void DrawMenu(APP_STATE* state)
 
 }
 
-void DrawColorMenu(APP_STATE* state)
+void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y)
 {
-	struct nk_context* ctx = state->ctx;
+	Color c = state->Palette.foreground;
+	Image* image = state->CurrentImage;
 
+	int index = (y * image->Width + x) * 3;
+	image->Data[index] = c.R;
+	image->Data[index + 1] = c.G;
+	image->Data[index + 2] = c.B;
+	UpdateImage(image);
 }
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
