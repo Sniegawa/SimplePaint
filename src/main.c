@@ -39,6 +39,7 @@ int main(int argc, char** argv)
 	state->SelectedTool = Pencil;
 	state->Palette.foreground = (Color){ 255,255,255 };
 	state->window = window;
+	state->CurrentPath = "";
 	// Load fonts
 	struct nk_font_atlas* atlas;
 	nk_glfw3_font_stash_begin(&atlas);
@@ -257,15 +258,28 @@ void DrawMenu(APP_STATE* state)
 		if (nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT))
 		{
 			const char* path = openFile(state,"Bitmap (*.bmp)\0*.bmp\0");
-			if(path != "")
+			if (path != "")
 			{
 				FreeImage(state->CurrentImage);
 				state->CurrentImage = CreateImagePath(path);
+				state->CurrentPath = path;
+				state->ShouldCreateFile = false;
 			}
 		}
 		if(nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT))
 		{
-			printf("Saving\n");
+			if(!state->ShouldCreateFile)
+				SaveImage(state->CurrentImage, state->CurrentPath);
+			else
+			{
+				const char* path = saveFile(state, "Bitmap (*.bmp)\0*.bmp\0");
+				if (path != "")
+				{
+					state->CurrentPath = path;
+					state->ShouldCreateFile = false;
+					SaveImage(state->CurrentImage, state->CurrentPath);
+				}
+			}
 		}
 		nk_menu_end(ctx);
 	}
@@ -299,6 +313,8 @@ void DrawMenu(APP_STATE* state)
 				memset(data, 255, (size_t)width * height * 3);
 				
 				state->CurrentImage = CreateImage(width, height, data);
+				state->CurrentPath = "";
+				state->ShouldCreateFile = true;
 				nk_popup_close(ctx);
 				NewImageFlag = false;
 			}

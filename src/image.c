@@ -100,3 +100,12 @@ void DrawImage(struct nk_context* ctx, const Image* image)
 	nk_image(ctx, image->handle);
 
 }
+
+void SaveImage(Image* img, const char* path)
+{
+	BMP_IMAGE bmp;
+	bmp.width = img->Width;
+	bmp.height = img->Height;
+	bmp.pixels = img->Data;
+	BMP_WRITE(&bmp, path);
+}

@@ -32,7 +32,7 @@ const char* openFile(APP_STATE* state,const char* filter)
 const char* saveFile(APP_STATE* state,const char* filter)
 {
 	OPENFILENAMEA ofn;
-	CHAR szFile[260] = { 0 };
+	static CHAR szFile[260] = { 0 };
 	CHAR currentDir[256] = { 0 };
 	ZeroMemory(&ofn, sizeof(OPENFILENAME));
 	ofn.lStructSize = sizeof(OPENFILENAME);
@@ -49,7 +49,7 @@ const char* saveFile(APP_STATE* state,const char* filter)
 	ofn.lpstrDefExt = strchr(filter, '\0') + 1;
 
 	if (GetSaveFileNameA(&ofn) == TRUE)
-		return ofn.lpstrFile;
+		return szFile;
 
 	return "";
 }

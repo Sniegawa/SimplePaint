@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -55,8 +57,10 @@ typedef struct APP_STATE
 	struct nk_context* ctx;
 	GLFWwindow* window;
 
+	Image* CurrentImage;
+	bool ShouldCreateFile;
+	const char* CurrentPath;
 
 	Tool SelectedTool;
-	Image* CurrentImage;
 	ColorPalette Palette;
 }APP_STATE;
