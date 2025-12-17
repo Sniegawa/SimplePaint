@@ -1,4 +1,7 @@
 #include "structs.h"
+#include "colors.h"
+#include "Image.h"
+#include "OpenFile.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -12,27 +15,11 @@
 #include <nuklear.h>
 #include <demo/glfw_opengl4/nuklear_glfw_gl4.h>
 
-#define BMP_IMPLEMENTATION
-#include <SimpleBMP.h>
-
-
-
 
 // GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
-
-Image* CreateImagePath(const char* path);
-Image* CreateImage(unsigned int width, unsigned int height, const unsigned char* data);
-void DrawImage(struct nk_context* ctx, const Image* image);
-void FreeImage(Image* img);
-
-// Helper color functions
-struct nk_color ColorToNK(Color c);
-struct nk_colorf ColorToNKf(Color c);
-Color NKftoColor(struct nk_colorf nk_cf);
-
 
 // Menu drawing functions
 void DrawToolbox(APP_STATE* state);
@@ -43,7 +30,6 @@ void DrawColorMenu(APP_STATE* state);
 int main(int argc, char** argv)
 {
 	GLFWwindow* window = InitLibraries();
-
 	// Init nuklear
 	struct nk_context* ctx = nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 
@@ -52,7 +38,7 @@ int main(int argc, char** argv)
 	state->ctx = ctx;
 	state->SelectedTool = Pencil;
 	state->Palette.foreground = (Color){ 255,255,255 };
-
+	state->window = window;
 	// Load fonts
 	struct nk_font_atlas* atlas;
 	nk_glfw3_font_stash_begin(&atlas);
@@ -134,97 +120,7 @@ GLFWwindow* InitLibraries()
 	return window;
 }
 
-Image* CreateImagePath(const char* path)
-{
 
-	BMP_IMAGE* imageData = BMP_LOAD(path);
-
-	Image* img = (Image*)malloc(sizeof(Image));
-	int width =  imageData->width;
-	int height = imageData->height;
-	img->Width = width;
-	img->Height = height;
-	size_t dataSize = (size_t)width * height * 3;
-	img->Data = (unsigned char*)malloc(dataSize);
-
-	if(!img->Data)
-	{
-		free(img);
-		return NULL;
-	}
-
-	memcpy(img->Data, imageData->pixels, dataSize);
-
-	GLuint tex;
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width , height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData->pixels);
-
-	img->handle = nk_image_id(tex);
-	img->GlTextureID = tex;
-
-	BMP_FREE(imageData);
-
-	return img;
-}
-
-Image* CreateImage(unsigned int width, unsigned int height, const unsigned char* data)
-{
-	Image* img = (Image*)malloc(sizeof(Image));
-	img->Width = width;
-	img->Height = height;
-	size_t dataSize = (size_t)width * height * 3;
-	img->Data = (unsigned char*)malloc(dataSize);
-
-	if (!img->Data)
-	{
-		free(img);
-		return NULL;
-	}
-
-	memcpy(img->Data, data, dataSize);
-	GLuint tex;
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-
-	img->handle = nk_image_id(tex);
-	img->GlTextureID = tex;
-	free(data);
-	return img;
-
-}
-
-void FreeImage(Image* img)
-{
-	// Free the opengl texture memory
-	// Note : glDeleteTextures DOES NOT free the memory from the driver, it allows gpu driver to reuse the texture handle, and the memory is still held for reuse
-	glDeleteTextures(1, &img->GlTextureID);
-	free(img->Data); // Free loaded pixel data
-	free(img); // Free the struct
-}
-
-void DrawImage(struct nk_context* ctx, const Image* image)
-{
-	nk_layout_row_static(ctx, image->Height, image->Width, 1);
-
-	nk_image(ctx, image->handle);
-
-}
 
 void DrawToolbox(APP_STATE* state)
 {
@@ -358,8 +254,19 @@ void DrawMenu(APP_STATE* state)
 		if (nk_menu_item_label(ctx, "New", NK_TEXT_LEFT))
 			NewImageFlag = true;
 
-		nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT);
-		nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT);
+		if (nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT))
+		{
+			const char* path = openFile(state,"Bitmap (*.bmp)\0*.bmp\0");
+			if(path != "")
+			{
+				FreeImage(state->CurrentImage);
+				state->CurrentImage = CreateImagePath(path);
+			}
+		}
+		if(nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT))
+		{
+			printf("Saving\n");
+		}
 		nk_menu_end(ctx);
 	}
 
@@ -416,33 +323,4 @@ void DrawColorMenu(APP_STATE* state)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
-}
-
-struct nk_color ColorToNK(Color c)
-{
-	struct nk_color nk_c;
-	nk_c.r = c.R;
-	nk_c.g = c.G;
-	nk_c.b = c.B;
-	nk_c.a = 255;
-	return nk_c;
-}
-
-struct nk_colorf ColorToNKf(Color c)
-{
-	struct nk_colorf nk_cf;
-	nk_cf.r = (float)c.R / 255;
-	nk_cf.g = (float)c.G / 255;
-	nk_cf.b = (float)c.B / 255;
-	nk_cf.a = 1.0f;
-	return nk_cf;
-}
-
-Color NKftoColor(struct nk_colorf nk_cf)
-{
-	Color c;
-	c.R = nk_cf.r * 255;
-	c.G = nk_cf.g * 255;
-	c.B = nk_cf.b * 255;
-	return c;
 }

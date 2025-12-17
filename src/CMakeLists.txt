@@ -2,9 +2,25 @@ cmake_minimum_required(VERSION 3.16)
 
 project(SimplePaint)
 
+if(WIN32)
+	set(PLATFORM_SOURCES
+		"Platform/OpenFileWindows.c"
+	)
+elseif(UNIX)
+	set(PLATFORM_SOURCES
+		"Platform/OpenFileLinux.c"
+	)
+endif()
+
 add_executable(SimplePaint
 	"main.c"
- "structs.h")
+	"structs.h"
+	"colors.h"
+	"image.c" 
+	"image.h" 
+	"OpenFile.h" 
+	${PLATFORM_SOURCES}
+)
 
 target_link_libraries(SimplePaint PUBLIC
 	GLAD

@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -54,6 +53,8 @@ typedef struct ColorPalette
 typedef struct APP_STATE 
 {
 	struct nk_context* ctx;
+	GLFWwindow* window;
+
 
 	Tool SelectedTool;
 	Image* CurrentImage;
