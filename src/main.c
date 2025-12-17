@@ -258,7 +258,7 @@ void DrawMenu(APP_STATE* state)
 		if (nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT))
 		{
 			const char* path = openFile(state,"Bitmap (*.bmp)\0*.bmp\0");
-			if (path != "")
+			if (path != NULL)
 			{
 				FreeImage(state->CurrentImage);
 				state->CurrentImage = CreateImagePath(path);
@@ -273,7 +273,7 @@ void DrawMenu(APP_STATE* state)
 			else
 			{
 				const char* path = saveFile(state, "Bitmap (*.bmp)\0*.bmp\0");
-				if (path != "")
+				if (path != NULL)
 				{
 					state->CurrentPath = path;
 					state->ShouldCreateFile = false;

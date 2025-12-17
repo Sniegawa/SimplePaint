@@ -26,7 +26,7 @@ const char* openFile(APP_STATE* state,const char* filter)
 	if (GetOpenFileNameA(&ofn) == TRUE)
 		return szFile;
 
-	return "";
+	return NULL;
 }
 
 const char* saveFile(APP_STATE* state,const char* filter)
@@ -51,5 +51,5 @@ const char* saveFile(APP_STATE* state,const char* filter)
 	if (GetSaveFileNameA(&ofn) == TRUE)
 		return szFile;
 
-	return "";
+	return NULL;
 }
