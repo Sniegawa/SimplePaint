@@ -27,7 +27,7 @@ void DrawViewport(APP_STATE* state);
 void DrawMenu(APP_STATE* state);
 
 void DrawPencil(APP_STATE* state,unsigned int x,unsigned int y);
-
+void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1);
 int main(int argc, char** argv)
 {
 	GLFWwindow* window = InitLibraries();
@@ -41,6 +41,8 @@ int main(int argc, char** argv)
 	state->Palette.foreground = (Color){ 255,255,255 };
 	state->window = window;
 	state->CurrentPath = "";
+	state->LastMouseX = -1;
+	state->LastMouseY = -1;
 	// Load fonts
 	struct nk_font_atlas* atlas;
 	nk_glfw3_font_stash_begin(&atlas);
@@ -239,7 +241,14 @@ void DrawViewport(APP_STATE* state)
 						DrawPencil(state, localX, localY);
 					}
 				}
+				state->LastMouseX = localX;
+				state->LastMouseY = localY;
 			}
+		}
+		else
+		{
+			state->LastMouseX = -1;
+			state->LastMouseY = -1;
 		}
 		nk_group_end(ctx);
 	}
@@ -342,10 +351,57 @@ void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y)
 	Color c = state->Palette.foreground;
 	Image* image = state->CurrentImage;
 
-	int index = (y * image->Width + x) * 3;
-	image->Data[index] = c.R;
-	image->Data[index + 1] = c.G;
-	image->Data[index + 2] = c.B;
+	if (state->LastMouseX > -1 && state->LastMouseY > -1)
+	{
+		DrawLine(state, x, y, state->LastMouseX, state->LastMouseY);
+	}
+	else
+	{
+		int index = (y * image->Width + x) * 3;
+		image->Data[index] = c.R;
+		image->Data[index + 1] = c.G;
+		image->Data[index + 2] = c.B;
+		UpdateImage(image);
+
+	}
+	
+	
+}
+
+void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1)
+{
+	Color c = state->Palette.foreground;
+	Image* image = state->CurrentImage;
+
+	int dx = abs(x1 - x0);
+	int dy = abs(y1 - y0);
+
+	int sx = x0 < x1 ? 1 : -1;
+	int sy = y0 < y1 ? 1 : -1;
+
+
+	int err = dx - dy;
+
+	while(x0 != x1 || y0 != y1)
+	{
+		int index = (y0 * image->Width + x0) * 3;
+		image->Data[index] = c.R;
+		image->Data[index + 1] = c.G;
+		image->Data[index + 2] = c.B;
+
+		int e2 = 2 * err;
+		if (e2 > -dy)
+		{
+			x0 += sx;
+			err -= dy;
+		}
+		if(e2 < dx)
+		{
+			y0 += sy;
+			err += dx;
+		}
+		
+	}
 	UpdateImage(image);
 }
 
