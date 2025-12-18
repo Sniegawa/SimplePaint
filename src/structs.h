@@ -62,6 +62,7 @@ typedef struct APP_STATE
 	const char* CurrentPath;
 
 	Tool SelectedTool;
+	int BrushSize;
 	int LastMouseX, LastMouseY;
 
 	ColorPalette Palette;

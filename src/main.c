@@ -26,8 +26,9 @@ void DrawToolbox(APP_STATE* state);
 void DrawViewport(APP_STATE* state);
 void DrawMenu(APP_STATE* state);
 
-void DrawPencil(APP_STATE* state,unsigned int x,unsigned int y);
-void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1);
+void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int BrushSize);
+void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1, Color c, int BrushSize);
+
 int main(int argc, char** argv)
 {
 	GLFWwindow* window = InitLibraries();
@@ -39,10 +40,13 @@ int main(int argc, char** argv)
 	state->ctx = ctx;
 	state->SelectedTool = Pencil;
 	state->Palette.foreground = (Color){ 255,255,255 };
+	state->Palette.background = (Color){ 255,255,255 };
 	state->window = window;
 	state->CurrentPath = "";
 	state->LastMouseX = -1;
 	state->LastMouseY = -1;
+	state->BrushSize = 1;
+
 	// Load fonts
 	struct nk_font_atlas* atlas;
 	nk_glfw3_font_stash_begin(&atlas);
@@ -64,7 +68,7 @@ int main(int argc, char** argv)
 
 		nk_glfw3_new_frame();
 
-		if (nk_begin(ctx, "SimplePaint", nk_rect(0, 0, 800, 600), NK_WINDOW_NO_SCROLLBAR))
+		if (nk_begin(ctx, "SimplePaint", nk_rect(0, 0, 1600, 900), NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_SCALABLE))
 		{
 			DrawMenu(state);
 
@@ -103,7 +107,7 @@ GLFWwindow* InitLibraries()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 
-	GLFWwindow* window = glfwCreateWindow(800, 600, "SimplePaint", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1600, 900, "SimplePaint", NULL, NULL);
 
 	if (window == NULL)
 	{
@@ -119,7 +123,7 @@ GLFWwindow* InitLibraries()
 		printf("Failed to initialize GLAD!\n");
 	}
 
-	glViewport(0, 0, 800, 600);
+	glViewport(0, 0, 1600, 900);
 
 	return window;
 }
@@ -162,6 +166,9 @@ void DrawToolbox(APP_STATE* state)
 				state->SelectedTool = ColorPicker;
 			}
 			nk_group_end(ctx);
+
+			nk_layout_row_dynamic(ctx, 50, 1);
+			nk_property_int(ctx, "Brush size", 1, &state->BrushSize, 20, 1, 0.5f);
 		}
 
 		// Color
@@ -238,7 +245,13 @@ void DrawViewport(APP_STATE* state)
 						state->Palette.foreground = (Color){ R,G,B };
 						break;
 					case Pencil:
-						DrawPencil(state, localX, localY);
+						DrawPencil(state, localX, localY,state->Palette.foreground,1);
+						break;
+					case Eraser:
+						DrawPencil(state, localX, localY, state->Palette.background,state->BrushSize);
+						break;
+					case Brush:
+						DrawPencil(state, localX, localY, state->Palette.foreground,state->BrushSize);
 					}
 				}
 				state->LastMouseX = localX;
@@ -346,32 +359,62 @@ void DrawMenu(APP_STATE* state)
 
 }
 
-void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y)
+void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int BrushSize)
 {
-	Color c = state->Palette.foreground;
 	Image* image = state->CurrentImage;
 
 	if (state->LastMouseX > -1 && state->LastMouseY > -1)
 	{
-		DrawLine(state, x, y, state->LastMouseX, state->LastMouseY);
+		DrawLine(state, x, y, state->LastMouseX, state->LastMouseY,c,BrushSize);
 	}
 	else
 	{
-		int index = (y * image->Width + x) * 3;
-		image->Data[index] = c.R;
-		image->Data[index + 1] = c.G;
-		image->Data[index + 2] = c.B;
-		UpdateImage(image);
+		if (BrushSize == 1)
+		{
+			int index = (y * image->Width + x) * 3;
+			image->Data[index] = c.R;
+			image->Data[index + 1] = c.G;
+			image->Data[index + 2] = c.B;
+			UpdateImage(image);
+		}
+		else
+		{
+			int cx = x;
+			int cy = y;
+			int radius = (BrushSize+1) * 0.5;
+			
+			for (int i = cx - radius; i < cx + radius; ++i)
+			{
+				for (int j = cy - radius; j < cy + radius; ++j)
+				{
+					int dx = i - cx;
+					int dy = j - cy;
+					float dist2 = dx * dx + dy * dy; // I will compare on squared values to omit square roots
+					if(dist2 <= radius*radius)
+					{
+						if (i < image->Width && j < image->Height && i >= 0 && j >= 0)
+						{
+							int index = (j * image->Width + i) * 3;
+							image->Data[index] = c.R;
+							image->Data[index + 1] = c.G;
+							image->Data[index + 2] = c.B;
+						}
+					}
+				}
+			}
+			UpdateImage(image);
 
+		}
 	}
-	
-	
+
 }
 
-void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1)
+
+void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1, Color c, int BrushSize)
 {
-	Color c = state->Palette.foreground;
 	Image* image = state->CurrentImage;
+
+	int radius = (BrushSize+1) * 0.5;
 
 	int dx = abs(x1 - x0);
 	int dy = abs(y1 - y0);
@@ -382,12 +425,32 @@ void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1)
 
 	int err = dx - dy;
 
-	while(x0 != x1 || y0 != y1)
+	while (x0 != x1 || y0 != y1)
 	{
-		int index = (y0 * image->Width + x0) * 3;
-		image->Data[index] = c.R;
-		image->Data[index + 1] = c.G;
-		image->Data[index + 2] = c.B;
+		int cx = x0;
+		int cy = y0;
+
+
+		for (int i = cx - radius; i < cx + radius; ++i)
+		{
+			for (int j = cy - radius; j < cy + radius; ++j)
+			{
+				int dx = i - cx;
+				int dy = j - cy;
+				float dist2 = dx * dx + dy * dy; // I will compare on squared values to omit square roots
+				if (dist2 <= radius * radius)
+				{
+					if (i < image->Width && j < image->Height && i >= 0 && j >= 0)
+					{
+						int index = (j * image->Width + i) * 3;
+						image->Data[index] = c.R;
+						image->Data[index + 1] = c.G;
+						image->Data[index + 2] = c.B;
+					}
+				}
+			}
+		}
+
 
 		int e2 = 2 * err;
 		if (e2 > -dy)
