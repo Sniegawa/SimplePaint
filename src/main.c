@@ -15,37 +15,28 @@
 #include <nuklear.h>
 #include <demo/glfw_opengl4/nuklear_glfw_gl4.h>
 
+#define ToolboxWidthRatio 0.25f
 
 // GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 GLFWwindow* InitLibraries();
+APP_STATE* InitApp();
 
 // Menu drawing functions
 void DrawToolbox(APP_STATE* state);
 void DrawViewport(APP_STATE* state);
 void DrawMenu(APP_STATE* state);
 
+// Draw pencil checks if it should use DrawLine function or DrawPoint
 void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int BrushSize);
-void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1, Color c, int BrushSize);
+void DrawLine(APP_STATE* state, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, Color c, int BrushSize);
+void DrawPoint(APP_STATE* state, unsigned int x, unsigned int y, Color c);
 
 int main(int argc, char** argv)
 {
-	GLFWwindow* window = InitLibraries();
-	// Init nuklear
-	struct nk_context* ctx = nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+	APP_STATE* state = InitApp();
 
-	// Init App state
-	APP_STATE* state = (APP_STATE*)malloc(sizeof(APP_STATE));
-	state->ctx = ctx;
-	state->SelectedTool = Pencil;
-	state->Palette.foreground = (Color){ 255,255,255 };
-	state->Palette.background = (Color){ 255,255,255 };
-	state->window = window;
-	state->CurrentPath = "";
-	state->LastMouseX = -1;
-	state->LastMouseY = -1;
-	state->BrushSize = 1;
 
 	// Load fonts
 	struct nk_font_atlas* atlas;
@@ -53,12 +44,15 @@ int main(int argc, char** argv)
 	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
 	nk_glfw3_font_stash_end();
 
+
 	Image* testImg = CreateImagePath("paint.bmp");
 
 	state->CurrentImage = testImg;
+	struct nk_context* ctx = state->ctx;
 
 
-	while(!glfwWindowShouldClose(window))
+
+	while(!glfwWindowShouldClose(state->window))
 	{
 		glfwPollEvents();
 
@@ -83,11 +77,9 @@ int main(int argc, char** argv)
 			nk_end(ctx);
 		}
 
-
-
 		nk_glfw3_render(NK_ANTI_ALIASING_ON);
 
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(state->window);
 	}
 
 
@@ -128,23 +120,43 @@ GLFWwindow* InitLibraries()
 	return window;
 }
 
+APP_STATE* InitApp()
+{
+	GLFWwindow* window = InitLibraries();
+	// Init nuklear
+	struct nk_context* ctx = nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
 
+	// Init App state
+	APP_STATE* state = (APP_STATE*)malloc(sizeof(APP_STATE));
+	state->ctx = ctx;
+	state->SelectedTool = Pencil;
+	state->Palette.foreground = (Color){ 0,0,0 };
+	state->Palette.background = (Color){ 255,255,255 };
+	state->window = window;
+	state->CurrentPath = "";
+	state->LastMouseX = -1;
+	state->LastMouseY = -1;
+	state->BrushSize = 1;
+
+	return state;
+}
 
 void DrawToolbox(APP_STATE* state)
 {
 	struct nk_context* ctx = state->ctx;
 
-	float height = nk_window_get_height(ctx) - 40;
+
 
 	if (nk_group_begin(ctx,"Toolbox",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 	{
 		// TODO : FIGURE OUT PADDINGS
 		// Tools
-		nk_layout_row_dynamic(ctx, height * 0.5f - 40, 1);
+
+		nk_layout_row_dynamic(ctx, 200, 1);
 		if (nk_group_begin(ctx, "Tools",0))
 		{
 
-			nk_layout_row_static(ctx, 0, 50, 2);
+			nk_layout_row_static(ctx, 50, 50, 2);
 
 			if (nk_button_label(ctx, "Pencil"))
 			{
@@ -165,24 +177,32 @@ void DrawToolbox(APP_STATE* state)
 			{
 				state->SelectedTool = ColorPicker;
 			}
-			nk_group_end(ctx);
+			
+			nk_layout_row_dynamic(ctx, 8, 1);
 
 			nk_layout_row_dynamic(ctx, 50, 1);
 			nk_property_int(ctx, "Brush size", 1, &state->BrushSize, 20, 1, 0.5f);
+			nk_group_end(ctx);
 		}
 
 		// Color
-		nk_layout_row_dynamic(ctx, height * 0.5f, 1);
-		if(nk_group_begin(ctx,"Colors",0))
+		nk_layout_row_dynamic(ctx, 500, 1);
+		if (nk_group_begin(ctx, "Colors", NK_WINDOW_NO_SCROLLBAR))
 		{
-			struct nk_rect content = nk_window_get_content_region(ctx);
+			struct nk_rect r = nk_window_get_content_region(ctx);
 
-			nk_layout_row_static(ctx, content.w, content.w, 1);
+			float picker_size = r.w < r.h ? r.w : r.h;
+			if (picker_size > 120)
+				picker_size = 120;
+
+			nk_layout_row_static(ctx, picker_size, picker_size, 1);
+
 			Color fg = state->Palette.foreground;
 			struct nk_colorf color = nk_color_picker(ctx, ColorToNKf(fg), NK_RGB);
 			
 			state->Palette.foreground = NKftoColor(color);
-
+			
+			// TODO : Make color palette, that can save up to 16 colors : LBM - uses color RBM - loads color MMB - resets to white
 			nk_group_end(ctx);
 		}
 
@@ -371,11 +391,7 @@ void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int B
 	{
 		if (BrushSize == 1)
 		{
-			int index = (y * image->Width + x) * 3;
-			image->Data[index] = c.R;
-			image->Data[index + 1] = c.G;
-			image->Data[index + 2] = c.B;
-			UpdateImage(image);
+			DrawPoint(state, x, y, c);
 		}
 		else
 		{
@@ -394,23 +410,20 @@ void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int B
 					{
 						if (i < image->Width && j < image->Height && i >= 0 && j >= 0)
 						{
-							int index = (j * image->Width + i) * 3;
-							image->Data[index] = c.R;
-							image->Data[index + 1] = c.G;
-							image->Data[index + 2] = c.B;
+							DrawPoint(state, i, j, c);
 						}
 					}
 				}
 			}
-			UpdateImage(image);
+
 
 		}
 	}
-
+	UpdateImage(image);
 }
 
 
-void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1, Color c, int BrushSize)
+void DrawLine(APP_STATE* state, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, Color c, int BrushSize)
 {
 	Image* image = state->CurrentImage;
 
@@ -442,10 +455,7 @@ void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1, Color c, int Bru
 				{
 					if (i < image->Width && j < image->Height && i >= 0 && j >= 0)
 					{
-						int index = (j * image->Width + i) * 3;
-						image->Data[index] = c.R;
-						image->Data[index + 1] = c.G;
-						image->Data[index + 2] = c.B;
+						DrawPoint(state, i, j, c);
 					}
 				}
 			}
@@ -466,6 +476,15 @@ void DrawLine(APP_STATE* state, int x0, int y0, int x1, int y1, Color c, int Bru
 		
 	}
 	UpdateImage(image);
+}
+
+void DrawPoint(APP_STATE* state, unsigned int x, unsigned int y, Color c)
+{
+	Image* image = state->CurrentImage;
+	int index = (y * image->Width + x) * 3;
+	image->Data[index] = c.R;
+	image->Data[index + 1] = c.G;
+	image->Data[index + 2] = c.B;
 }
 
 
