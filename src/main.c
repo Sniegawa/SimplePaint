@@ -17,6 +17,8 @@
 
 #define ToolboxWidthRatio 0.25f
 
+#define PALETTE_SIZE 16
+
 // GLFW callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
@@ -45,24 +47,25 @@ int main(int argc, char** argv)
 	nk_glfw3_font_stash_end();
 
 
-	Image* testImg = CreateImagePath("paint.bmp");
+	Image* testImg = CreateBlankImage(800, 800);
 
 	state->CurrentImage = testImg;
 	struct nk_context* ctx = state->ctx;
 
-
+	int WindowWidth, WindowHeight;
+	glfwGetFramebufferSize(state->window, &WindowWidth, &WindowHeight);
 
 	while(!glfwWindowShouldClose(state->window))
 	{
 		glfwPollEvents();
-
+		glfwGetFramebufferSize(state->window, &WindowWidth, &WindowHeight);
 		glClearColor(0.2, 0.2, 0.2, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 
 		nk_glfw3_new_frame();
 
-		if (nk_begin(ctx, "SimplePaint", nk_rect(0, 0, 1600, 900), NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_SCALABLE))
+		if (nk_begin(ctx, "SimplePaint", nk_rect(0, 0, WindowWidth, WindowHeight), NK_WINDOW_NO_SCROLLBAR))
 		{
 			DrawMenu(state);
 
@@ -138,14 +141,17 @@ APP_STATE* InitApp()
 	state->LastMouseY = -1;
 	state->BrushSize = 1;
 
+
+	state->Palette.colorsArray = (Color*)malloc(sizeof(Color) * PALETTE_SIZE);
+	for (int i = 0; i < PALETTE_SIZE; ++i)
+		state->Palette.colorsArray[i] = (Color){ 255,255,255 };
+
 	return state;
 }
 
 void DrawToolbox(APP_STATE* state)
 {
 	struct nk_context* ctx = state->ctx;
-
-
 
 	if (nk_group_begin(ctx,"Toolbox",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 	{
@@ -201,8 +207,45 @@ void DrawToolbox(APP_STATE* state)
 			struct nk_colorf color = nk_color_picker(ctx, ColorToNKf(fg), NK_RGB);
 			
 			state->Palette.foreground = NKftoColor(color);
-			
-			// TODO : Make color palette, that can save up to 16 colors : LBM - uses color RBM - loads color MMB - resets to white
+
+			nk_layout_row_dynamic(ctx, 32, 4);
+
+			Color* Palette = state->Palette.colorsArray;
+
+			for (int i = 0; i < PALETTE_SIZE; i++)
+			{
+				struct nk_color nkc = ColorToNK(Palette[i]);
+
+				nk_style_push_style_item(ctx, &ctx->style.button.normal, nk_style_item_color(nkc));
+				nk_style_push_style_item(ctx, &ctx->style.button.hover, nk_style_item_color(nkc));
+				nk_style_push_style_item(ctx, &ctx->style.button.active, nk_style_item_color(nkc));
+
+				struct nk_rect bounds;
+
+				bounds = nk_widget_bounds(ctx);
+				nk_button_label(ctx, "");
+
+				if (nk_input_mouse_clicked(&ctx->input, NK_BUTTON_LEFT, bounds))
+				{
+					state->Palette.foreground = Palette[i];
+				}
+
+				if (nk_input_mouse_clicked(&ctx->input, NK_BUTTON_RIGHT, bounds))
+				{
+					Palette[i] = state->Palette.foreground;
+				}
+
+				if (nk_input_mouse_clicked(&ctx->input, NK_BUTTON_MIDDLE, bounds))
+				{
+					Palette[i] = (Color){ 255,255,255 };
+				}
+
+				nk_style_pop_style_item(ctx);
+				nk_style_pop_style_item(ctx);
+				nk_style_pop_style_item(ctx);
+
+			}
+
 			nk_group_end(ctx);
 		}
 
@@ -357,11 +400,8 @@ void DrawMenu(APP_STATE* state)
 			if (nk_button_label(ctx, "Create"))
 			{
 				FreeImage(state->CurrentImage);
-				unsigned char* data = (unsigned char*)calloc((size_t)width * height * 3, sizeof(unsigned char));
-
-				memset(data, 255, (size_t)width * height * 3);
 				
-				state->CurrentImage = CreateImage(width, height, data);
+				state->CurrentImage = CreateBlankImage(width, height);
 				state->CurrentPath = "";
 				state->ShouldCreateFile = true;
 				nk_popup_close(ctx);
@@ -421,7 +461,6 @@ void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int B
 	}
 	UpdateImage(image);
 }
-
 
 void DrawLine(APP_STATE* state, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, Color c, int BrushSize)
 {

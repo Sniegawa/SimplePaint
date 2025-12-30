@@ -84,6 +84,42 @@ Image* CreateImage(unsigned int width, unsigned int height, const unsigned char*
 
 }
 
+Image* CreateBlankImage(unsigned int width, unsigned int height)
+{
+	Image* img = (Image*)malloc(sizeof(Image));
+	img->Width = width;
+	img->Height = height;
+	size_t dataSize = (size_t)width * height * 3;
+	img->Data = (unsigned char*)malloc(dataSize);
+
+	if (!img->Data)
+	{
+		free(img);
+		return NULL;
+	}
+
+	unsigned char* data = (unsigned char*)calloc((size_t)width * height * 3, sizeof(unsigned char));
+	memset(data, 255, (size_t)width * height * 3);
+
+	memcpy(img->Data, data, dataSize);
+	GLuint tex;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+	img->handle = nk_image_id(tex);
+	img->GlTextureID = tex;
+	free(data);
+	return img;
+}
+
 void FreeImage(Image* img)
 {
 	// Free the opengl texture memory
