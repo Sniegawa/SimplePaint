@@ -39,25 +39,18 @@ int main(int argc, char** argv)
 {
 	APP_STATE* state = InitApp();
 
-
-	// Load fonts
-	struct nk_font_atlas* atlas;
-	nk_glfw3_font_stash_begin(&atlas);
-	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
-	nk_glfw3_font_stash_end();
-
-
-	Image* testImg = CreateBlankImage(800, 800);
-
-	state->CurrentImage = testImg;
+	// Creating alias for ctx
 	struct nk_context* ctx = state->ctx;
 
+	// I use them to dynamically resize the apps window based on glfw window
 	int WindowWidth, WindowHeight;
-	glfwGetFramebufferSize(state->window, &WindowWidth, &WindowHeight);
 
+	// Main loop
 	while(!glfwWindowShouldClose(state->window))
 	{
+
 		glfwPollEvents();
+
 		glfwGetFramebufferSize(state->window, &WindowWidth, &WindowHeight);
 		glClearColor(0.2, 0.2, 0.2, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -85,7 +78,7 @@ int main(int argc, char** argv)
 		glfwSwapBuffers(state->window);
 	}
 
-
+	glfwDestroyWindow(state->window);
 	glfwTerminate();
 	return 0;
 }
@@ -101,8 +94,9 @@ GLFWwindow* InitLibraries()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-
-	GLFWwindow* window = glfwCreateWindow(1600, 900, "SimplePaint", NULL, NULL);
+	const unsigned int InitailWidth = 1600;
+	const unsigned int InitailHeight = 900;
+	GLFWwindow* window = glfwCreateWindow(InitailWidth, InitailHeight, "SimplePaint", NULL, NULL);
 
 	if (window == NULL)
 	{
@@ -118,7 +112,7 @@ GLFWwindow* InitLibraries()
 		printf("Failed to initialize GLAD!\n");
 	}
 
-	glViewport(0, 0, 1600, 900);
+	glViewport(0, 0, InitailWidth, InitailHeight);
 
 	return window;
 }
@@ -137,14 +131,24 @@ APP_STATE* InitApp()
 	state->Palette.background = (Color){ 255,255,255 };
 	state->window = window;
 	state->CurrentPath = "";
-	state->LastMouseX = -1;
 	state->LastMouseY = -1;
+	state->LastMouseX = -1;
 	state->BrushSize = 1;
 
-
+	// Init color palette
 	state->Palette.colorsArray = (Color*)malloc(sizeof(Color) * PALETTE_SIZE);
 	for (int i = 0; i < PALETTE_SIZE; ++i)
 		state->Palette.colorsArray[i] = (Color){ 255,255,255 };
+
+	// Load fonts
+	struct nk_font_atlas* atlas;
+	nk_glfw3_font_stash_begin(&atlas);
+	// For loading fonts Nuklear/demo/glfw_opengl4/main.c 127
+	nk_glfw3_font_stash_end();
+
+	// Create the initial background image
+	Image* testImg = CreateBlankImage(800, 800);
+	state->CurrentImage = testImg;
 
 	return state;
 }
@@ -155,48 +159,38 @@ void DrawToolbox(APP_STATE* state)
 
 	if (nk_group_begin(ctx,"Toolbox",NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 	{
-		// TODO : FIGURE OUT PADDINGS
 		// Tools
 
 		nk_layout_row_dynamic(ctx, 200, 1);
 		if (nk_group_begin(ctx, "Tools",0))
 		{
-
+			// grid of 50x50 boxes 2 cols wide
 			nk_layout_row_static(ctx, 50, 50, 2);
 
 			if (nk_button_label(ctx, "Pencil"))
-			{
 				state->SelectedTool = Pencil;
-			}
 
 			if (nk_button_label(ctx, "Brush"))
-			{
 				state->SelectedTool = Brush;
-			}
 
 			if (nk_button_label(ctx, "Eraser"))
-			{
 				state->SelectedTool = Eraser;
-			}
 
 			if (nk_button_label(ctx, "Color picker"))
-			{
 				state->SelectedTool = ColorPicker;
-			}
-			
-			nk_layout_row_dynamic(ctx, 8, 1);
 
-			nk_layout_row_dynamic(ctx, 50, 1);
-			nk_property_int(ctx, "Brush size", 1, &state->BrushSize, 20, 1, 0.5f);
+			nk_layout_row_dynamic(ctx, 25, 1);
+			nk_property_int(ctx, "Size:", 1, &state->BrushSize, 20, 1, 0.5f);
 			nk_group_end(ctx);
 		}
 
 		// Color
-		nk_layout_row_dynamic(ctx, 500, 1);
+		nk_layout_row_dynamic(ctx, 300, 1);
 		if (nk_group_begin(ctx, "Colors", NK_WINDOW_NO_SCROLLBAR))
 		{
 			struct nk_rect r = nk_window_get_content_region(ctx);
 
+			// Make color picker square
 			float picker_size = r.w < r.h ? r.w : r.h;
 			if (picker_size > 120)
 				picker_size = 120;
@@ -208,6 +202,7 @@ void DrawToolbox(APP_STATE* state)
 			
 			state->Palette.foreground = NKftoColor(color);
 
+			//Grid for palette colors
 			nk_layout_row_dynamic(ctx, 32, 4);
 
 			Color* Palette = state->Palette.colorsArray;
@@ -387,7 +382,7 @@ void DrawMenu(APP_STATE* state)
 
 	if(NewImageFlag)
 	{
-		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "New image", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE, nk_rect(100, 100, 220, 150)))
+		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "New image", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR, nk_rect(100, 100, 220, 180)))
 		{
 			nk_layout_row_dynamic(ctx, 30, 1);
 			nk_label(ctx, "Create new image", NK_TEXT_CENTERED);
