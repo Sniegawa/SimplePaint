@@ -1,6 +1,6 @@
 #include "structs.h"
 #include "colors.h"
-#include "Image.h"
+#include "image.h"
 #include "OpenFile.h"
 
 #include <stdio.h>

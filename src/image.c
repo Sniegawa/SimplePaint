@@ -1,7 +1,7 @@
 #define BMP_IMPLEMENTATION
 #include <SimpleBMP.h>
 
-#include "Image.h"
+#include "image.h"
 
 
 #include <stdlib.h>
