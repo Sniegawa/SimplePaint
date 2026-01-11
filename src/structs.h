@@ -33,7 +33,7 @@ typedef struct Image
 {
 	unsigned int GlTextureID;
 	struct nk_image handle;
-	unsigned int Width;		//I think w,h is also stored inside struct nk_image
+	unsigned int Width;
 	unsigned int Height;
 	unsigned char* Data;
 }Image;

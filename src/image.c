@@ -1,17 +1,14 @@
+#include "image.h"
+
 #define BMP_IMPLEMENTATION
 #include <SimpleBMP.h>
-
-#include "image.h"
+#include <glad/glad.h>
 
 
 #include <stdlib.h>
 
-#include <glad/glad.h>
-
-
 Image* CreateImagePath(const char* path)
 {
-
 	BMP_IMAGE* imageData = BMP_LOAD(path);
 
 	Image* img = (Image*)malloc(sizeof(Image));
@@ -19,17 +16,19 @@ Image* CreateImagePath(const char* path)
 	int height = imageData->height;
 	img->Width = width;
 	img->Height = height;
-	size_t dataSize = (size_t)width * height * 3;
+
+	size_t dataSize = (size_t)width * height * 3; // Width * size * 3 bytes per pixel RGB
 	img->Data = (unsigned char*)malloc(dataSize);
 
-	if (!img->Data)
+	if (!img->Data) // In case memory is not allocated just return null
 	{
 		free(img);
 		return NULL;
 	}
 
-	memcpy(img->Data, imageData->pixels, dataSize);
+	memcpy(img->Data, imageData->pixels, dataSize); // Copy data to Image class
 
+	// Create OpenGL texture
 	GLuint tex;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -45,7 +44,7 @@ Image* CreateImagePath(const char* path)
 	img->handle = nk_image_id(tex);
 	img->GlTextureID = tex;
 
-	BMP_FREE(imageData);
+	BMP_FREE(imageData); // Free the data, since it's already stored on the GPU and Image struct
 
 	return img;
 }
@@ -58,13 +57,15 @@ Image* CreateImage(unsigned int width, unsigned int height, const unsigned char*
 	size_t dataSize = (size_t)width * height * 3;
 	img->Data = (unsigned char*)malloc(dataSize);
 
-	if (!img->Data)
+	if (!img->Data) // In case memory is not allocated just return null
 	{
 		free(img);
 		return NULL;
 	}
 
-	memcpy(img->Data, data, dataSize);
+	memcpy(img->Data, data, dataSize); // Copy data to Image class
+
+	// Create Texture on the GPU
 	GLuint tex;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -79,7 +80,9 @@ Image* CreateImage(unsigned int width, unsigned int height, const unsigned char*
 
 	img->handle = nk_image_id(tex);
 	img->GlTextureID = tex;
-	free(data);
+
+	free(data); // Free the data, since it's already stored on the GPU and Image struct
+
 	return img;
 
 }
@@ -92,16 +95,18 @@ Image* CreateBlankImage(unsigned int width, unsigned int height)
 	size_t dataSize = (size_t)width * height * 3;
 	img->Data = (unsigned char*)malloc(dataSize);
 
-	if (!img->Data)
+	if (!img->Data) // In case memory is not allocated just return null
 	{
 		free(img);
 		return NULL;
 	}
 
 	unsigned char* data = (unsigned char*)calloc((size_t)width * height * 3, sizeof(unsigned char));
-	memset(data, 255, (size_t)width * height * 3);
+	memset(data, 255, (size_t)width * height * 3); // Set whole image to white
 
-	memcpy(img->Data, data, dataSize);
+	memcpy(img->Data, data, dataSize); // Copy data to Image class
+
+	// Create Texture on the GPU
 	GLuint tex;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -116,7 +121,9 @@ Image* CreateBlankImage(unsigned int width, unsigned int height)
 
 	img->handle = nk_image_id(tex);
 	img->GlTextureID = tex;
-	free(data);
+
+	free(data); // Free the data, since it's already stored on the GPU and Image struct
+
 	return img;
 }
 

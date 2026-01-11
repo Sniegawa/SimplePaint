@@ -37,12 +37,13 @@ void DrawPoint(APP_STATE* state, unsigned int x, unsigned int y, Color c);
 
 int main(int argc, char** argv)
 {
+	// Initialize app state
 	APP_STATE* state = InitApp();
 
 	// Creating alias for ctx
 	struct nk_context* ctx = state->ctx;
 
-	// I use them to dynamically resize the apps window based on glfw window
+	// I use those to dynamically resize the apps window based on glfw window
 	int WindowWidth, WindowHeight;
 
 	// Main loop
@@ -62,14 +63,17 @@ int main(int argc, char** argv)
 		{
 			DrawMenu(state);
 
-			nk_layout_row_begin(ctx, NK_STATIC, nk_window_get_height(ctx) - 20, 2);
+			float ViewToolSize = nk_window_get_height(ctx) - 20; // sizeof window - 20px for menubar
+			nk_layout_row_begin(ctx, NK_STATIC, ViewToolSize, 2); // Layout for Tools and Viewport
 
-			nk_layout_row_push(ctx, 150);
-
+			float ToolboxWidth = 150.0f;  // Toolbox has to have exactly 150 px of width
+			nk_layout_row_push(ctx, ToolboxWidth);
 			DrawToolbox(state);
 
-			nk_layout_row_push(ctx, nk_window_get_width(ctx) - 150 - 10);
+			float ViewportWidth = nk_window_get_width(ctx) - ToolboxWidth - 10.0f;
+			nk_layout_row_push(ctx, ViewportWidth); 
 			DrawViewport(state);
+
 			nk_end(ctx);
 		}
 
@@ -77,8 +81,10 @@ int main(int argc, char** argv)
 
 		glfwSwapBuffers(state->window);
 	}
-
+	nk_free(ctx);
+	free(state->Palette.colorsArray);
 	glfwDestroyWindow(state->window);
+	free(state);
 	glfwTerminate();
 	return 0;
 }
@@ -88,20 +94,22 @@ GLFWwindow* InitLibraries()
 	if (glfwInit() == GLFW_FALSE)
 	{
 		printf("Failed to initialize GLFW!\n");
+		return NULL;
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	const unsigned int InitailWidth = 1600;
-	const unsigned int InitailHeight = 900;
-	GLFWwindow* window = glfwCreateWindow(InitailWidth, InitailHeight, "SimplePaint", NULL, NULL);
+	const unsigned int InitialWidth = 1600;
+	const unsigned int InitialHeight = 900;
+	GLFWwindow* window = glfwCreateWindow(InitialWidth, InitialHeight, "SimplePaint", NULL, NULL);
 
 	if (window == NULL)
 	{
 		printf("Failed to initialize window!\n");
 		glfwTerminate();
+		return NULL;
 	}
 
 	glfwMakeContextCurrent(window);
@@ -112,7 +120,7 @@ GLFWwindow* InitLibraries()
 		printf("Failed to initialize GLAD!\n");
 	}
 
-	glViewport(0, 0, InitailWidth, InitailHeight);
+	glViewport(0, 0, InitialWidth, InitialHeight);
 
 	return window;
 }
@@ -418,18 +426,19 @@ void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int B
 {
 	Image* image = state->CurrentImage;
 
-	if (state->LastMouseX > -1 && state->LastMouseY > -1)
+	if (state->LastMouseX > -1 && state->LastMouseY > -1) // Check if user was holding LMB
 	{
-		DrawLine(state, x, y, state->LastMouseX, state->LastMouseY,c,BrushSize);
+		DrawLine(state, x, y, state->LastMouseX, state->LastMouseY, c, BrushSize); // If user was holding LMB draw line to avoid leaving gaps
 	}
-	else
+	else // If it's user first click in canvas
 	{
-		if (BrushSize == 1)
+		if (BrushSize == 1) // If brush size is just 1 draw simple point
 		{
 			DrawPoint(state, x, y, c);
 		}
 		else
 		{
+			// Simple algorithm to draw pixels in a radius around a pixel
 			int cx = x;
 			int cy = y;
 			int radius = (BrushSize+1) * 0.5;
@@ -441,20 +450,13 @@ void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int B
 					int dx = i - cx;
 					int dy = j - cy;
 					float dist2 = dx * dx + dy * dy; // I will compare on squared values to omit square roots
-					if(dist2 <= radius*radius)
-					{
-						if (i < image->Width && j < image->Height && i >= 0 && j >= 0)
-						{
+					if(dist2 <= radius*radius && i < image->Width && j < image->Height && i >= 0 && j >= 0)
 							DrawPoint(state, i, j, c);
-						}
-					}
 				}
 			}
-
-
 		}
 	}
-	UpdateImage(image);
+	UpdateImage(image); // To avoid updating the gpu texture too much i update it once after all changes were made
 }
 
 void DrawLine(APP_STATE* state, unsigned int x0, unsigned int y0, unsigned int x1, unsigned int y1, Color c, int BrushSize)
@@ -462,6 +464,8 @@ void DrawLine(APP_STATE* state, unsigned int x0, unsigned int y0, unsigned int x
 	Image* image = state->CurrentImage;
 
 	int radius = (BrushSize+1) * 0.5;
+
+	// Bresenham’s Line algorithm
 
 	int dx = abs(x1 - x0);
 	int dy = abs(y1 - y0);
@@ -484,7 +488,7 @@ void DrawLine(APP_STATE* state, unsigned int x0, unsigned int y0, unsigned int x
 			{
 				int dx = i - cx;
 				int dy = j - cy;
-				float dist2 = dx * dx + dy * dy; // I will compare on squared values to omit square roots
+				float dist2 = dx * dx + dy * dy; // I will compare squared values to omit square roots
 				if (dist2 <= radius * radius)
 				{
 					if (i < image->Width && j < image->Height && i >= 0 && j >= 0)
