@@ -142,7 +142,7 @@ APP_STATE* InitApp()
 	state->LastMouseY = -1;
 	state->LastMouseX = -1;
 	state->BrushSize = 1;
-
+  state->ShouldCreateFile = true;
 	// Init color palette
 	state->Palette.colorsArray = (Color*)malloc(sizeof(Color) * PALETTE_SIZE);
 	for (int i = 0; i < PALETTE_SIZE; ++i)
@@ -339,7 +339,7 @@ void DrawMenu(APP_STATE* state)
 	struct nk_context* ctx = state->ctx;
 	
 	static bool NewImageFlag = false;
-
+  static bool AboutFlag = false;
 	nk_menubar_begin(ctx);
 
 	nk_layout_row_static(ctx, 10, 50, 2);
@@ -382,7 +382,8 @@ void DrawMenu(APP_STATE* state)
 	if (nk_menu_begin_label(ctx, "Help", NK_TEXT_LEFT, nk_vec2(150, 200)))
 	{
 		nk_layout_row_dynamic(ctx, 25, 1);
-		nk_menu_item_label(ctx, "About", NK_TEXT_LEFT);
+		if(nk_menu_item_label(ctx, "About", NK_TEXT_LEFT))
+      AboutFlag = true;
 		nk_menu_end(ctx);
 	}
 
@@ -419,6 +420,25 @@ void DrawMenu(APP_STATE* state)
 		}
 
 	}
+
+  if(AboutFlag)
+  {
+    if (nk_popup_begin(ctx,NK_POPUP_STATIC,"About",NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR, nk_rect(0,0,200,120)))
+    {
+      nk_layout_row_dynamic(ctx, 30, 1);
+      nk_label(ctx, "About", NK_TEXT_CENTERED);
+
+      nk_label(ctx, "Author : Mikolaj Lisowski", NK_TEXT_CENTERED);
+      
+
+      if (nk_button_label(ctx, "Close"))
+      {
+        nk_popup_close(ctx);
+        AboutFlag = false;
+      }
+      nk_popup_end(ctx);
+    }
+  }
 
 }
 

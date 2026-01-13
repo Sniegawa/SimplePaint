@@ -58,10 +58,7 @@ Image* CreateImage(unsigned int width, unsigned int height, const unsigned char*
 	img->Data = (unsigned char*)malloc(dataSize);
 
 	if (!img->Data) // In case memory is not allocated just return null
-	{
-		free(img);
 		return NULL;
-	}
 
 	memcpy(img->Data, data, dataSize); // Copy data to Image class
 
@@ -81,8 +78,6 @@ Image* CreateImage(unsigned int width, unsigned int height, const unsigned char*
 	img->handle = nk_image_id(tex);
 	img->GlTextureID = tex;
 
-	free(data); // Free the data, since it's already stored on the GPU and Image struct
-
 	return img;
 
 }
@@ -96,10 +91,7 @@ Image* CreateBlankImage(unsigned int width, unsigned int height)
 	img->Data = (unsigned char*)malloc(dataSize);
 
 	if (!img->Data) // In case memory is not allocated just return null
-	{
-		free(img);
 		return NULL;
-	}
 
 	unsigned char* data = (unsigned char*)calloc((size_t)width * height * 3, sizeof(unsigned char));
 	memset(data, 255, (size_t)width * height * 3); // Set whole image to white
@@ -122,7 +114,6 @@ Image* CreateBlankImage(unsigned int width, unsigned int height)
 	img->handle = nk_image_id(tex);
 	img->GlTextureID = tex;
 
-	free(data); // Free the data, since it's already stored on the GPU and Image struct
 
 	return img;
 }

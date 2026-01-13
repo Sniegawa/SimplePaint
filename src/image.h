@@ -2,7 +2,6 @@
 
 #include "structs.h"
 
-#include <SimpleBMP.h>
 #include <nuklear.h>
 
 Image* CreateImagePath(const char* path);
