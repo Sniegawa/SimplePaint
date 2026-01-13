@@ -25,6 +25,12 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 GLFWwindow* InitLibraries();
 APP_STATE* InitApp();
 
+void APP_OPEN(APP_STATE* state);
+void APP_NEW(APP_STATE* state);
+void APP_SAVE(APP_STATE* state);
+void APP_SAVEAS(APP_STATE* state);
+void CheckShortcuts(APP_STATE* state);
+
 // Menu drawing functions
 void DrawToolbox(APP_STATE* state);
 void DrawViewport(APP_STATE* state);
@@ -56,6 +62,8 @@ int main(int argc, char** argv)
 		glClearColor(0.2, 0.2, 0.2, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+    
+    CheckShortcuts(state);
 
 		nk_glfw3_new_frame();
 
@@ -110,7 +118,7 @@ GLFWwindow* InitLibraries()
 		printf("Failed to initialize window!\n");
 		glfwTerminate();
 		return NULL;
-	}
+	} 
 
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -143,6 +151,8 @@ APP_STATE* InitApp()
 	state->LastMouseX = -1;
 	state->BrushSize = 1;
   state->ShouldCreateFile = true;
+  state->NewFileFlag = false;
+
 	// Init color palette
 	state->Palette.colorsArray = (Color*)malloc(sizeof(Color) * PALETTE_SIZE);
 	for (int i = 0; i < PALETTE_SIZE; ++i)
@@ -338,7 +348,6 @@ void DrawMenu(APP_STATE* state)
 {
 	struct nk_context* ctx = state->ctx;
 	
-	static bool NewImageFlag = false;
   static bool AboutFlag = false;
 	nk_menubar_begin(ctx);
 
@@ -348,44 +357,19 @@ void DrawMenu(APP_STATE* state)
 	{
 		nk_layout_row_dynamic(ctx, 25, 1);
 		if (nk_menu_item_label(ctx, "New", NK_TEXT_LEFT))
-			NewImageFlag = true;
+			state->NewFileFlag = true;
 
 		if (nk_menu_item_label(ctx, "Open", NK_TEXT_LEFT))
-		{
-			const char* path = openFile(state,"Bitmap (*.bmp)\0*.bmp\0");
-			if (path != NULL)
-			{
-				FreeImage(state->CurrentImage);
-				state->CurrentImage = CreateImagePath(path);
-				state->CurrentPath = path;
-				state->ShouldCreateFile = false;
-			}
-		}
+      APP_OPEN(state);
 		if(nk_menu_item_label(ctx, "Save", NK_TEXT_LEFT))
 		{
 			if(!state->ShouldCreateFile)
-				SaveImage(state->CurrentImage, state->CurrentPath);
+        APP_SAVE(state);
 			else
-			{
-				const char* path = saveFile(state, "Bitmap (*.bmp)\0*.bmp\0");
-				if (path != NULL)
-				{
-					state->CurrentPath = path;
-					state->ShouldCreateFile = false;
-					SaveImage(state->CurrentImage, state->CurrentPath);
-				}
-			}
+			  APP_SAVEAS(state);
 		}
     if(nk_menu_item_label(ctx,"Save as",NK_TEXT_LEFT))
-    {
-      const char* path = saveFile(state, "Bitmap (*.bmp)\0*.bmp\0");
-			if (path != NULL)
-			{
-				state->CurrentPath = path;
-				state->ShouldCreateFile = false;
-				SaveImage(state->CurrentImage, state->CurrentPath);
-			} 
-    }
+      APP_SAVEAS(state);
 		nk_menu_end(ctx);
 	}
 
@@ -399,7 +383,7 @@ void DrawMenu(APP_STATE* state)
 
 	nk_menubar_end(ctx);
 
-	if(NewImageFlag)
+	if(state->NewFileFlag)
 	{
 		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "New image", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR, nk_rect(100, 100, 220, 180)))
 		{
@@ -419,12 +403,12 @@ void DrawMenu(APP_STATE* state)
 				state->CurrentPath = "";
 				state->ShouldCreateFile = true;
 				nk_popup_close(ctx);
-				NewImageFlag = false;
+				state->NewFileFlag = false;
 			}
 			if (nk_button_label(ctx, "Close"))
 			{
 				nk_popup_close(ctx);
-				NewImageFlag = false;
+				state->NewFileFlag = false;
 			}
 			nk_popup_end(ctx);
 		}
@@ -555,6 +539,78 @@ void DrawPoint(APP_STATE* state, unsigned int x, unsigned int y, Color c)
 	image->Data[index + 2] = c.B;
 }
 
+void APP_OPEN(APP_STATE* state)
+{
+	const char* path = openFile(state,"Bitmap (*.bmp)\0*.bmp\0");
+	if (path != NULL)
+	{
+		FreeImage(state->CurrentImage);
+		state->CurrentImage = CreateImagePath(path);
+		state->CurrentPath = path;
+		state->ShouldCreateFile = false;
+	}
+}
+
+void APP_NEW(APP_STATE* state)
+{
+  state->NewFileFlag = true;
+}
+
+void APP_SAVE(APP_STATE* state)
+{
+  SaveImage(state->CurrentImage, state->CurrentPath);
+}
+
+void APP_SAVEAS(APP_STATE* state)
+{
+  const char* path = saveFile(state, "Bitmap (*.bmp)\0*.bmp\0");
+  if(path != NULL)
+  {
+    state->CurrentPath = path;
+    state->ShouldCreateFile = false;
+    SaveImage(state->CurrentImage, path);
+  }
+}
+
+void CheckShortcuts(APP_STATE* state)
+{
+  GLFWwindow* window = state->window;
+
+  if(glfwGetKey(window, GLFW_KEY_B))
+  {
+    state->SelectedTool = Brush;
+  }
+  if(glfwGetKey(window, GLFW_KEY_E))
+  {
+    state->SelectedTool = Eraser;
+  }
+  if(glfwGetKey(window, GLFW_KEY_P))
+  {
+    state->SelectedTool = Pencil;
+  }
+  if(glfwGetKey(window, GLFW_KEY_I))
+  {
+    state->SelectedTool = ColorPicker;
+  }
+
+  if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL))
+  {
+    if(glfwGetKey(window, GLFW_KEY_S))
+    {
+      if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) || state->ShouldCreateFile)
+        APP_SAVEAS(state); 
+      else
+        APP_SAVE(state);
+    }
+
+    if(glfwGetKey(window, GLFW_KEY_N))
+      APP_NEW(state);
+
+    if(glfwGetKey(window, GLFW_KEY_O))
+      APP_OPEN(state);
+
+  }
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {

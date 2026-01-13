@@ -60,6 +60,7 @@ typedef struct APP_STATE
 	Image* CurrentImage;
 	bool ShouldCreateFile;
 	const char* CurrentPath;
+  bool NewFileFlag;
 
 	Tool SelectedTool;
 	int BrushSize;
