@@ -376,6 +376,16 @@ void DrawMenu(APP_STATE* state)
 				}
 			}
 		}
+    if(nk_menu_item_label(ctx,"Save as",NK_TEXT_LEFT))
+    {
+      const char* path = saveFile(state, "Bitmap (*.bmp)\0*.bmp\0");
+			if (path != NULL)
+			{
+				state->CurrentPath = path;
+				state->ShouldCreateFile = false;
+				SaveImage(state->CurrentImage, state->CurrentPath);
+			} 
+    }
 		nk_menu_end(ctx);
 	}
 
