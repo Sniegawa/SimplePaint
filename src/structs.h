@@ -16,6 +16,8 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 
+#define PALETTE_SIZE 16
+
 #include <nuklear.h>
 #include <demo/glfw_opengl4/nuklear_glfw_gl4.h>
 

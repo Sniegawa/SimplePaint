@@ -20,7 +20,7 @@ add_executable(SimplePaint
 	"image.h" 
 	"OpenFile.h" 
 	${PLATFORM_SOURCES}
-)
+ "interface.h" "interface.c" "app.h" "app.c" "draw.h" "draw.c")
 
 target_link_libraries(SimplePaint PUBLIC
 	GLAD
