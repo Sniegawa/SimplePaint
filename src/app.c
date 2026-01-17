@@ -52,7 +52,7 @@ GLFWwindow* InitLibraries()
 	return window;
 }
 
-APP_STATE* InitApp()
+APP_STATE* InitApp(const char* openedFile)
 {
 	GLFWwindow* window = InitLibraries();
 	// Init nuklear
@@ -84,8 +84,14 @@ APP_STATE* InitApp()
 	nk_glfw3_font_stash_end();
 
 	// Create the initial background image
-	Image* testImg = CreateBlankImage(800, 800);
-	state->CurrentImage = testImg;
+	Image* bgImg;
+	if(strlen(openedFile) == 0)
+		bgImg = CreateBlankImage(800, 800);
+	else
+		bgImg = CreateImagePath(openedFile);
+
+
+	state->CurrentImage = bgImg;
 
 	return state;
 }

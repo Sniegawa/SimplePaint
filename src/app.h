@@ -5,7 +5,7 @@
 
 
 GLFWwindow* InitLibraries();
-APP_STATE* InitApp();
+APP_STATE* InitApp(const char* openedFile);
 
 void APP_OPEN(APP_STATE* state);
 void APP_NEW(APP_STATE* state);
