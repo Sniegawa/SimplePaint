@@ -10,7 +10,10 @@
 Image* CreateImagePath(const char* path)
 {
 	BMP_IMAGE* imageData = BMP_LOAD(path);
-
+	if(!imageData)
+	{
+		return NULL;
+	}
 	Image* img = (Image*)malloc(sizeof(Image));
 	int width = imageData->width;
 	int height = imageData->height;

@@ -2,6 +2,7 @@
 
 #include "colors.h"
 #include "draw.h"
+#include "app.h"
 
 #include <nuklear.h>
 #include <demo/glfw_opengl4/nuklear_glfw_gl4.h>

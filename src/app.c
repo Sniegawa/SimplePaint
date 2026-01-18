@@ -4,6 +4,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "OpenFile.h"
 
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
@@ -159,10 +160,14 @@ void APP_OPEN(APP_STATE* state)
 	const char* path = openFile(state, "Bitmap (*.bmp)\0*.bmp\0");
 	if (path != NULL)
 	{
-		FreeImage(state->CurrentImage);
-		state->CurrentImage = CreateImagePath(path);
-		state->CurrentPath = path;
-		state->ShouldCreateFile = false;
+		Image* img = CreateImagePath(path);
+		if(img)
+		{
+			FreeImage(state->CurrentImage);
+			state->CurrentImage = img;
+			state->CurrentPath = path;
+			state->ShouldCreateFile = false;
+		}
 	}
 }
 
