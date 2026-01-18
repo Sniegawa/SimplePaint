@@ -255,13 +255,17 @@ void DrawMenu(APP_STATE* state)
 	{
 		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "About", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR, nk_rect(0, 0, 200, 150)))
 		{
-			nk_layout_row_dynamic(ctx, 30, 1);
+			nk_layout_row_dynamic(ctx, 15, 1);
 			nk_label(ctx, "About", NK_TEXT_CENTERED);
 
 			nk_label(ctx, "Author : Mikolaj Lisowski", NK_TEXT_CENTERED);
 
-			nk_label(ctx, "Version : 1.0.0", NK_TEXT_CENTERED);
+			nk_label(ctx, "Version : 1.0.1", NK_TEXT_CENTERED);
 
+			nk_label(ctx, "Github : Sniegawa", NK_TEXT_CENTERED);
+
+			nk_label(ctx, "Program licensed under MIT", NK_TEXT_CENTERED);
+			nk_layout_row_dynamic(ctx, 30, 1);
 			if (nk_button_label(ctx, "Close"))
 			{
 				nk_popup_close(ctx);
