@@ -252,13 +252,14 @@ void DrawMenu(APP_STATE* state)
 
 	if (AboutFlag)
 	{
-		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "About", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR, nk_rect(0, 0, 200, 120)))
+		if (nk_popup_begin(ctx, NK_POPUP_STATIC, "About", NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR, nk_rect(0, 0, 200, 150)))
 		{
 			nk_layout_row_dynamic(ctx, 30, 1);
 			nk_label(ctx, "About", NK_TEXT_CENTERED);
 
 			nk_label(ctx, "Author : Mikolaj Lisowski", NK_TEXT_CENTERED);
 
+			nk_label(ctx, "Version : 1.0.0", NK_TEXT_CENTERED);
 
 			if (nk_button_label(ctx, "Close"))
 			{
