@@ -29,7 +29,7 @@ void DrawToolbox(APP_STATE* state)
 			if (nk_button_label(ctx, "Eraser"))
 				state->SelectedTool = Eraser;
 
-			if (nk_button_label(ctx, "Color picker"))
+			if (nk_button_label(ctx, "Picker"))
 				state->SelectedTool = ColorPicker;
 
 			nk_layout_row_dynamic(ctx, 25, 1);
