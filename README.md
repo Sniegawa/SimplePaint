@@ -1,5 +1,7 @@
 # SimplePaint
 
-SimplePaint jest prost¹ aplikacj¹ graficzn¹ typu „paint”, umo¿liwiaj¹c¹ rysowanie na obszarze roboczym przy u¿yciu podstawowych narzêdzi. 
+Simple paint is a simple graphics application that's based on ms-paint style.
+It allows user to draw in canvas using mouse and simple tools.
 
-Celem projektu jest zademonstrowanie umiejêtnoœci praktycznego wykorzystania jêzyka C.
+To clone repo use `git clone --recursive https://github.com/Sniegawa/SimplePaint`
+
