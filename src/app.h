@@ -6,6 +6,8 @@
 
 GLFWwindow* InitLibraries();
 APP_STATE* InitApp(const char* openedFile);
+void RunApp(APP_STATE* state);
+void CleanupApp(APP_STATE* state);
 
 void APP_OPEN(APP_STATE* state);
 void APP_NEW(APP_STATE* state);

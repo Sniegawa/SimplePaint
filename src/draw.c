@@ -1,6 +1,8 @@
 #include "draw.h"
 #include "image.h"
 
+#include <stdlib.h>
+
 void DrawPencil(APP_STATE* state, unsigned int x, unsigned int y, Color c, int BrushSize)
 {
 	Image* image = state->CurrentImage;
